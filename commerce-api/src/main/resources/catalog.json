@@ -1,0 +1,1504 @@
+[
+  {
+    "sourceId": 78,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Apple MacBook Pro 14 Inch Space Grey",
+    "sourceUrl": "https://dummyjson.com/products/78",
+    "title": "MacBook Pro 14 英寸笔记本",
+    "kind": "笔记本",
+    "category": "数码",
+    "description": "深空灰，便携办公与专业创作。",
+    "attributes": {
+      "屏幕": "14 英寸"
+    },
+    "image": "/media/products/78.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/laptops/apple-macbook-pro-14-inch-space-grey/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 7899,
+        "stock": 5
+      }
+    ]
+  },
+  {
+    "sourceId": 79,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Asus Zenbook Pro Dual Screen Laptop",
+    "sourceUrl": "https://dummyjson.com/products/79",
+    "title": "华硕 Zenbook Pro 双屏笔记本",
+    "kind": "笔记本",
+    "category": "数码",
+    "description": "双屏工作区，适合多窗口任务。",
+    "attributes": {
+      "屏幕": "双屏"
+    },
+    "image": "/media/products/79.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/laptops/asus-zenbook-pro-dual-screen-laptop/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 6599,
+        "stock": 6
+      }
+    ]
+  },
+  {
+    "sourceId": 80,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Huawei Matebook X Pro",
+    "sourceUrl": "https://dummyjson.com/products/80",
+    "title": "华为 MateBook X Pro 笔记本",
+    "kind": "笔记本",
+    "category": "数码",
+    "description": "面向移动办公的轻薄笔记本电脑。",
+    "attributes": {
+      "用途": "移动办公"
+    },
+    "image": "/media/products/80.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/laptops/huawei-matebook-x-pro/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 5999,
+        "stock": 7
+      }
+    ]
+  },
+  {
+    "sourceId": 81,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Lenovo Yoga 920",
+    "sourceUrl": "https://dummyjson.com/products/81",
+    "title": "联想 Yoga 920 笔记本",
+    "kind": "笔记本",
+    "category": "数码",
+    "description": "适合演示、阅读与移动办公。",
+    "attributes": {
+      "系列": "Yoga"
+    },
+    "image": "/media/products/81.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/laptops/lenovo-yoga-920/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 4299,
+        "stock": 8
+      }
+    ]
+  },
+  {
+    "sourceId": 99,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Amazon Echo Plus",
+    "sourceUrl": "https://dummyjson.com/products/99",
+    "title": "Amazon Echo Plus 智能音箱",
+    "kind": "音箱",
+    "category": "数码",
+    "description": "在家中播放音乐或语音互动。",
+    "attributes": {
+      "用途": "居家听音"
+    },
+    "image": "/media/products/99.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mobile-accessories/amazon-echo-plus/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 399,
+        "stock": 9
+      }
+    ]
+  },
+  {
+    "sourceId": 100,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Apple Airpods",
+    "sourceUrl": "https://dummyjson.com/products/100",
+    "title": "Apple AirPods 无线耳机",
+    "kind": "耳机",
+    "category": "数码",
+    "description": "便于通勤携带的无线耳机。",
+    "attributes": {
+      "佩戴方式": "入耳式"
+    },
+    "image": "/media/products/100.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mobile-accessories/apple-airpods/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 799,
+        "stock": 10
+      }
+    ]
+  },
+  {
+    "sourceId": 101,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Apple AirPods Max Silver",
+    "sourceUrl": "https://dummyjson.com/products/101",
+    "title": "AirPods Max 银色头戴耳机",
+    "kind": "耳机",
+    "category": "数码",
+    "description": "包耳式设计，适合安静听音。",
+    "attributes": {
+      "佩戴方式": "头戴式"
+    },
+    "image": "/media/products/101.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mobile-accessories/apple-airpods-max-silver/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 2999,
+        "stock": 11
+      }
+    ]
+  },
+  {
+    "sourceId": 102,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Apple Airpower Wireless Charger",
+    "sourceUrl": "https://dummyjson.com/products/102",
+    "title": "桌面无线充电板",
+    "kind": "充电器",
+    "category": "数码",
+    "description": "把支持无线充电的设备放在桌面充电。",
+    "attributes": {
+      "方式": "无线"
+    },
+    "image": "/media/products/102.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mobile-accessories/apple-airpower-wireless-charger/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 169,
+        "stock": 12
+      }
+    ]
+  },
+  {
+    "sourceId": 103,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Apple HomePod Mini Cosmic Grey",
+    "sourceUrl": "https://dummyjson.com/products/103",
+    "title": "HomePod mini 智能音箱",
+    "kind": "音箱",
+    "category": "数码",
+    "description": "小巧的深空灰色桌面音箱。",
+    "attributes": {
+      "用途": "居家听音"
+    },
+    "image": "/media/products/103.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mobile-accessories/apple-homepod-mini-cosmic-grey/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 599,
+        "stock": 13
+      }
+    ]
+  },
+  {
+    "sourceId": 104,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Apple iPhone Charger",
+    "sourceUrl": "https://dummyjson.com/products/104",
+    "title": "Apple iPhone 电源适配器",
+    "kind": "充电器",
+    "category": "数码",
+    "description": "适合搭配手机充电线使用。",
+    "attributes": {
+      "方式": "有线"
+    },
+    "image": "/media/products/104.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mobile-accessories/apple-iphone-charger/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 99,
+        "stock": 14
+      }
+    ]
+  },
+  {
+    "sourceId": 105,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Apple MagSafe Battery Pack",
+    "sourceUrl": "https://dummyjson.com/products/105",
+    "title": "Apple MagSafe 外接电池",
+    "kind": "充电宝",
+    "category": "数码",
+    "description": "为兼容的手机提供外出补电。",
+    "attributes": {
+      "方式": "磁吸"
+    },
+    "image": "/media/products/105.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mobile-accessories/apple-magsafe-battery-pack/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 349,
+        "stock": 15
+      }
+    ]
+  },
+  {
+    "sourceId": 106,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Apple Watch Series 4 Gold",
+    "sourceUrl": "https://dummyjson.com/products/106",
+    "title": "Apple Watch Series 4 金色腕表",
+    "kind": "智能手表",
+    "category": "数码",
+    "description": "日常佩戴的智能腕表。",
+    "attributes": {
+      "颜色": "金色"
+    },
+    "image": "/media/products/106.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mobile-accessories/apple-watch-series-4-gold/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 999,
+        "stock": 16
+      }
+    ]
+  },
+  {
+    "sourceId": 107,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Beats Flex Wireless Earphones",
+    "sourceUrl": "https://dummyjson.com/products/107",
+    "title": "Beats Flex 无线耳机",
+    "kind": "耳机",
+    "category": "数码",
+    "description": "轻便的颈挂式无线耳机。",
+    "attributes": {
+      "佩戴方式": "颈挂式"
+    },
+    "image": "/media/products/107.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mobile-accessories/beats-flex-wireless-earphones/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 279,
+        "stock": 17
+      }
+    ]
+  },
+  {
+    "sourceId": 108,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "iPhone 12 Silicone Case with MagSafe Plum",
+    "sourceUrl": "https://dummyjson.com/products/108",
+    "title": "iPhone 12 梅子色保护壳",
+    "kind": "手机壳",
+    "category": "数码",
+    "description": "带磁吸设计的手机保护壳。",
+    "attributes": {
+      "适用机型": "iPhone 12"
+    },
+    "image": "/media/products/108.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mobile-accessories/iphone-12-silicone-case-with-magsafe-plum/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 129,
+        "stock": 18
+      }
+    ]
+  },
+  {
+    "sourceId": 109,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Monopod",
+    "sourceUrl": "https://dummyjson.com/products/109",
+    "title": "便携摄影独脚架",
+    "kind": "摄影配件",
+    "category": "数码",
+    "description": "为外出拍摄提供支撑。",
+    "attributes": {
+      "用途": "摄影"
+    },
+    "image": "/media/products/109.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mobile-accessories/monopod/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 159,
+        "stock": 19
+      }
+    ]
+  },
+  {
+    "sourceId": 110,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Selfie Lamp with iPhone",
+    "sourceUrl": "https://dummyjson.com/products/110",
+    "title": "桌面直播补光台灯",
+    "kind": "台灯",
+    "category": "数码",
+    "description": "用于桌面视频通话、自拍和直播补光。",
+    "attributes": {
+      "用途": "直播补光",
+      "光源": "LED"
+    },
+    "image": "/media/products/110.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mobile-accessories/selfie-lamp-with-iphone/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 129,
+        "stock": 20
+      }
+    ]
+  },
+  {
+    "sourceId": 111,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Selfie Stick Monopod",
+    "sourceUrl": "https://dummyjson.com/products/111",
+    "title": "伸缩自拍杆",
+    "kind": "摄影配件",
+    "category": "数码",
+    "description": "适合旅行自拍和合照。",
+    "attributes": {
+      "用途": "摄影"
+    },
+    "image": "/media/products/111.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mobile-accessories/selfie-stick-monopod/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 69,
+        "stock": 0
+      }
+    ]
+  },
+  {
+    "sourceId": 123,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "iPhone 13 Pro",
+    "sourceUrl": "https://dummyjson.com/products/123",
+    "title": "iPhone 13 Pro 手机",
+    "kind": "手机",
+    "category": "数码",
+    "description": "适合拍照、日常通讯和移动应用。",
+    "attributes": {
+      "品牌": "Apple"
+    },
+    "image": "/media/products/123.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/smartphones/iphone-13-pro/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 3499,
+        "stock": 6
+      }
+    ]
+  },
+  {
+    "sourceId": 125,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Oppo A57",
+    "sourceUrl": "https://dummyjson.com/products/125",
+    "title": "OPPO A57 手机",
+    "kind": "手机",
+    "category": "数码",
+    "description": "面向日常通讯的智能手机。",
+    "attributes": {
+      "品牌": "OPPO"
+    },
+    "image": "/media/products/125.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/smartphones/oppo-a57/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 899,
+        "stock": 7
+      }
+    ]
+  },
+  {
+    "sourceId": 159,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "iPad Mini 2021 Starlight",
+    "sourceUrl": "https://dummyjson.com/products/159",
+    "title": "iPad mini 星光色平板",
+    "kind": "平板",
+    "category": "数码",
+    "description": "适合随身阅读、笔记与影音。",
+    "attributes": {
+      "颜色": "星光色"
+    },
+    "image": "/media/products/159.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/tablets/ipad-mini-2021-starlight/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 2599,
+        "stock": 8
+      }
+    ]
+  },
+  {
+    "sourceId": 83,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Blue & Black Check Shirt",
+    "sourceUrl": "https://dummyjson.com/products/83",
+    "title": "蓝黑格纹衬衫",
+    "kind": "衬衫",
+    "category": "服饰",
+    "description": "蓝黑配色的日常格纹衬衫。",
+    "attributes": {
+      "图案": "格纹"
+    },
+    "image": "/media/products/83.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mens-shirts/blue-&-black-check-shirt/1.webp",
+    "skus": [
+      {
+        "label": "M 码",
+        "price": 159,
+        "stock": 9
+      },
+      {
+        "label": "L 码",
+        "price": 159,
+        "stock": 10
+      },
+      {
+        "label": "XL 码",
+        "price": 159,
+        "stock": 11
+      }
+    ]
+  },
+  {
+    "sourceId": 84,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Gigabyte Aorus Men Tshirt",
+    "sourceUrl": "https://dummyjson.com/products/84",
+    "title": "AORUS 印花短袖 T 恤",
+    "kind": "T恤",
+    "category": "服饰",
+    "description": "适合日常休闲搭配的印花短袖。",
+    "attributes": {
+      "袖型": "短袖"
+    },
+    "image": "/media/products/84.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mens-shirts/gigabyte-aorus-men-tshirt/1.webp",
+    "skus": [
+      {
+        "label": "M 码",
+        "price": 109,
+        "stock": 10
+      },
+      {
+        "label": "L 码",
+        "price": 109,
+        "stock": 11
+      },
+      {
+        "label": "XL 码",
+        "price": 109,
+        "stock": 12
+      }
+    ]
+  },
+  {
+    "sourceId": 85,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Man Plaid Shirt",
+    "sourceUrl": "https://dummyjson.com/products/85",
+    "title": "休闲方格衬衫",
+    "kind": "衬衫",
+    "category": "服饰",
+    "description": "清晰格纹，适合休闲叠穿。",
+    "attributes": {
+      "图案": "格纹"
+    },
+    "image": "/media/products/85.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mens-shirts/man-plaid-shirt/1.webp",
+    "skus": [
+      {
+        "label": "M 码",
+        "price": 139,
+        "stock": 11
+      },
+      {
+        "label": "L 码",
+        "price": 139,
+        "stock": 12
+      },
+      {
+        "label": "XL 码",
+        "price": 139,
+        "stock": 13
+      }
+    ]
+  },
+  {
+    "sourceId": 86,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Man Short Sleeve Shirt",
+    "sourceUrl": "https://dummyjson.com/products/86",
+    "title": "简约短袖衬衫",
+    "kind": "衬衫",
+    "category": "服饰",
+    "description": "适合通勤和夏日穿搭。",
+    "attributes": {
+      "袖型": "短袖"
+    },
+    "image": "/media/products/86.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mens-shirts/man-short-sleeve-shirt/1.webp",
+    "skus": [
+      {
+        "label": "M 码",
+        "price": 129,
+        "stock": 12
+      },
+      {
+        "label": "L 码",
+        "price": 129,
+        "stock": 13
+      },
+      {
+        "label": "XL 码",
+        "price": 129,
+        "stock": 14
+      }
+    ]
+  },
+  {
+    "sourceId": 87,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Men Check Shirt",
+    "sourceUrl": "https://dummyjson.com/products/87",
+    "title": "经典格子衬衫",
+    "kind": "衬衫",
+    "category": "服饰",
+    "description": "格子图案的日常上衣。",
+    "attributes": {
+      "图案": "格纹"
+    },
+    "image": "/media/products/87.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mens-shirts/men-check-shirt/1.webp",
+    "skus": [
+      {
+        "label": "M 码",
+        "price": 169,
+        "stock": 13
+      },
+      {
+        "label": "L 码",
+        "price": 169,
+        "stock": 14
+      },
+      {
+        "label": "XL 码",
+        "price": 169,
+        "stock": 15
+      }
+    ]
+  },
+  {
+    "sourceId": 88,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Nike Air Jordan 1 Red And Black",
+    "sourceUrl": "https://dummyjson.com/products/88",
+    "title": "Nike Air Jordan 1 红黑运动鞋",
+    "kind": "运动鞋",
+    "category": "服饰",
+    "description": "经典撞色高帮鞋型。",
+    "attributes": {
+      "颜色": "红黑"
+    },
+    "image": "/media/products/88.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mens-shoes/nike-air-jordan-1-red-and-black/1.webp",
+    "skus": [
+      {
+        "label": "39 码",
+        "price": 799,
+        "stock": 14
+      },
+      {
+        "label": "40 码",
+        "price": 799,
+        "stock": 15
+      },
+      {
+        "label": "41 码",
+        "price": 799,
+        "stock": 16
+      }
+    ]
+  },
+  {
+    "sourceId": 90,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Puma Future Rider Trainers",
+    "sourceUrl": "https://dummyjson.com/products/90",
+    "title": "PUMA Future Rider 休闲鞋",
+    "kind": "运动鞋",
+    "category": "服饰",
+    "description": "适合日常出行的运动鞋。",
+    "attributes": {
+      "系列": "Future Rider"
+    },
+    "image": "/media/products/90.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mens-shoes/puma-future-rider-trainers/1.webp",
+    "skus": [
+      {
+        "label": "39 码",
+        "price": 499,
+        "stock": 15
+      },
+      {
+        "label": "40 码",
+        "price": 499,
+        "stock": 16
+      },
+      {
+        "label": "41 码",
+        "price": 499,
+        "stock": 17
+      }
+    ]
+  },
+  {
+    "sourceId": 91,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Sports Sneakers Off White & Red",
+    "sourceUrl": "https://dummyjson.com/products/91",
+    "title": "米白拼红休闲运动鞋",
+    "kind": "运动鞋",
+    "category": "服饰",
+    "description": "适合日常步行的拼色运动鞋。",
+    "attributes": {
+      "颜色": "米白拼红"
+    },
+    "image": "/media/products/91.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/mens-shoes/sports-sneakers-off-white-&-red/1.webp",
+    "skus": [
+      {
+        "label": "39 码",
+        "price": 259,
+        "stock": 16
+      },
+      {
+        "label": "40 码",
+        "price": 259,
+        "stock": 17
+      },
+      {
+        "label": "41 码",
+        "price": 259,
+        "stock": 18
+      }
+    ]
+  },
+  {
+    "sourceId": 154,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Black Sun Glasses",
+    "sourceUrl": "https://dummyjson.com/products/154",
+    "title": "黑色太阳镜",
+    "kind": "太阳镜",
+    "category": "服饰",
+    "description": "深色镜框，适合日常搭配。",
+    "attributes": {
+      "颜色": "黑色"
+    },
+    "image": "/media/products/154.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/sunglasses/black-sun-glasses/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 99,
+        "stock": 17
+      }
+    ]
+  },
+  {
+    "sourceId": 155,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Classic Sun Glasses",
+    "sourceUrl": "https://dummyjson.com/products/155",
+    "title": "复古框太阳镜",
+    "kind": "太阳镜",
+    "category": "服饰",
+    "description": "经典镜框轮廓。",
+    "attributes": {
+      "风格": "复古"
+    },
+    "image": "/media/products/155.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/sunglasses/classic-sun-glasses/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 129,
+        "stock": 18
+      }
+    ]
+  },
+  {
+    "sourceId": 156,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Green and Black Glasses",
+    "sourceUrl": "https://dummyjson.com/products/156",
+    "title": "绿黑拼色太阳镜",
+    "kind": "太阳镜",
+    "category": "服饰",
+    "description": "拼色设计增添穿搭细节。",
+    "attributes": {
+      "颜色": "绿黑"
+    },
+    "image": "/media/products/156.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/sunglasses/green-and-black-glasses/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 119,
+        "stock": 0
+      }
+    ]
+  },
+  {
+    "sourceId": 162,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Blue Frock",
+    "sourceUrl": "https://dummyjson.com/products/162",
+    "title": "蓝色连衣裙",
+    "kind": "连衣裙",
+    "category": "服饰",
+    "description": "轻松利落的日常裙装。",
+    "attributes": {
+      "颜色": "蓝色"
+    },
+    "image": "/media/products/162.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/tops/blue-frock/1.webp",
+    "skus": [
+      {
+        "label": "M 码",
+        "price": 189,
+        "stock": 20
+      },
+      {
+        "label": "L 码",
+        "price": 189,
+        "stock": 5
+      },
+      {
+        "label": "XL 码",
+        "price": 189,
+        "stock": 6
+      }
+    ]
+  },
+  {
+    "sourceId": 163,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Girl Summer Dress",
+    "sourceUrl": "https://dummyjson.com/products/163",
+    "title": "夏日休闲连衣裙",
+    "kind": "连衣裙",
+    "category": "服饰",
+    "description": "适合温暖天气的休闲裙。",
+    "attributes": {
+      "季节": "夏季"
+    },
+    "image": "/media/products/163.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/tops/girl-summer-dress/1.webp",
+    "skus": [
+      {
+        "label": "M 码",
+        "price": 159,
+        "stock": 5
+      },
+      {
+        "label": "L 码",
+        "price": 159,
+        "stock": 6
+      },
+      {
+        "label": "XL 码",
+        "price": 159,
+        "stock": 7
+      }
+    ]
+  },
+  {
+    "sourceId": 164,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Gray Dress",
+    "sourceUrl": "https://dummyjson.com/products/164",
+    "title": "灰色连衣裙",
+    "kind": "连衣裙",
+    "category": "服饰",
+    "description": "低饱和灰色的日常连衣裙。",
+    "attributes": {
+      "颜色": "灰色"
+    },
+    "image": "/media/products/164.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/tops/gray-dress/1.webp",
+    "skus": [
+      {
+        "label": "M 码",
+        "price": 179,
+        "stock": 6
+      },
+      {
+        "label": "L 码",
+        "price": 179,
+        "stock": 7
+      },
+      {
+        "label": "XL 码",
+        "price": 179,
+        "stock": 8
+      }
+    ]
+  },
+  {
+    "sourceId": 166,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Tartan Dress",
+    "sourceUrl": "https://dummyjson.com/products/166",
+    "title": "格纹连衣裙",
+    "kind": "连衣裙",
+    "category": "服饰",
+    "description": "带有格纹图案的连衣裙。",
+    "attributes": {
+      "图案": "格纹"
+    },
+    "image": "/media/products/166.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/tops/tartan-dress/1.webp",
+    "skus": [
+      {
+        "label": "M 码",
+        "price": 199,
+        "stock": 7
+      },
+      {
+        "label": "L 码",
+        "price": 199,
+        "stock": 8
+      },
+      {
+        "label": "XL 码",
+        "price": 199,
+        "stock": 9
+      }
+    ]
+  },
+  {
+    "sourceId": 172,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Blue Women's Handbag",
+    "sourceUrl": "https://dummyjson.com/products/172",
+    "title": "蓝色手提包",
+    "kind": "手提包",
+    "category": "服饰",
+    "description": "适合日常通勤的手提包。",
+    "attributes": {
+      "颜色": "蓝色"
+    },
+    "image": "/media/products/172.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/womens-bags/blue-women's-handbag/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 229,
+        "stock": 8
+      }
+    ]
+  },
+  {
+    "sourceId": 173,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Heshe Women's Leather Bag",
+    "sourceUrl": "https://dummyjson.com/products/173",
+    "title": "Heshe 皮革手提包",
+    "kind": "手提包",
+    "category": "服饰",
+    "description": "皮革质感的手提包。",
+    "attributes": {
+      "材质": "皮革"
+    },
+    "image": "/media/products/173.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/womens-bags/heshe-women's-leather-bag/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 489,
+        "stock": 9
+      }
+    ]
+  },
+  {
+    "sourceId": 174,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Prada Women Bag",
+    "sourceUrl": "https://dummyjson.com/products/174",
+    "title": "Prada 手提包",
+    "kind": "手提包",
+    "category": "服饰",
+    "description": "结构感鲜明的手提包。",
+    "attributes": {
+      "品牌": "Prada"
+    },
+    "image": "/media/products/174.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/womens-bags/prada-women-bag/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 1999,
+        "stock": 10
+      }
+    ]
+  },
+  {
+    "sourceId": 175,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "White Faux Leather Backpack",
+    "sourceUrl": "https://dummyjson.com/products/175",
+    "title": "白色双肩背包",
+    "kind": "背包",
+    "category": "服饰",
+    "description": "人造革材质的双肩包。",
+    "attributes": {
+      "材质": "人造革"
+    },
+    "image": "/media/products/175.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/womens-bags/white-faux-leather-backpack/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 249,
+        "stock": 11
+      }
+    ]
+  },
+  {
+    "sourceId": 176,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Women Handbag Black",
+    "sourceUrl": "https://dummyjson.com/products/176",
+    "title": "黑色日常手提包",
+    "kind": "手提包",
+    "category": "服饰",
+    "description": "低调实用的黑色配件。",
+    "attributes": {
+      "颜色": "黑色"
+    },
+    "image": "/media/products/176.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/womens-bags/women-handbag-black/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 219,
+        "stock": 12
+      }
+    ]
+  },
+  {
+    "sourceId": 11,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Annibale Colombo Bed",
+    "sourceUrl": "https://dummyjson.com/products/11",
+    "title": "Annibale Colombo 床架",
+    "kind": "床架",
+    "category": "家居",
+    "description": "适用于卧室的家具。",
+    "attributes": {
+      "空间": "卧室"
+    },
+    "image": "/media/products/11.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/furniture/annibale-colombo-bed/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 4699,
+        "stock": 13
+      }
+    ]
+  },
+  {
+    "sourceId": 12,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Annibale Colombo Sofa",
+    "sourceUrl": "https://dummyjson.com/products/12",
+    "title": "Annibale Colombo 沙发",
+    "kind": "沙发",
+    "category": "家居",
+    "description": "适合客厅休息与会客。",
+    "attributes": {
+      "空间": "客厅"
+    },
+    "image": "/media/products/12.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/furniture/annibale-colombo-sofa/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 3799,
+        "stock": 14
+      }
+    ]
+  },
+  {
+    "sourceId": 13,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Bedside Table African Cherry",
+    "sourceUrl": "https://dummyjson.com/products/13",
+    "title": "樱桃木色床头柜",
+    "kind": "柜子",
+    "category": "家居",
+    "description": "用于床边收纳和置物。",
+    "attributes": {
+      "空间": "卧室"
+    },
+    "image": "/media/products/13.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/furniture/bedside-table-african-cherry/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 699,
+        "stock": 15
+      }
+    ]
+  },
+  {
+    "sourceId": 14,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Knoll Saarinen Executive Conference Chair",
+    "sourceUrl": "https://dummyjson.com/products/14",
+    "title": "Knoll Saarinen 会议椅",
+    "kind": "椅子",
+    "category": "家居",
+    "description": "适合书房与办公空间。",
+    "attributes": {
+      "空间": "书房"
+    },
+    "image": "/media/products/14.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/furniture/knoll-saarinen-executive-conference-chair/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 999,
+        "stock": 16
+      }
+    ]
+  },
+  {
+    "sourceId": 15,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Wooden Bathroom Sink With Mirror",
+    "sourceUrl": "https://dummyjson.com/products/15",
+    "title": "木质浴室洗手台组合",
+    "kind": "浴室柜",
+    "category": "家居",
+    "description": "组合镜面和洗手台的浴室家具。",
+    "attributes": {
+      "空间": "浴室"
+    },
+    "image": "/media/products/15.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/furniture/wooden-bathroom-sink-with-mirror/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 1399,
+        "stock": 17
+      }
+    ]
+  },
+  {
+    "sourceId": 43,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Decoration Swing",
+    "sourceUrl": "https://dummyjson.com/products/43",
+    "title": "装饰秋千摆件",
+    "kind": "摆件",
+    "category": "家居",
+    "description": "点缀室内角落的装饰摆件。",
+    "attributes": {
+      "用途": "装饰"
+    },
+    "image": "/media/products/43.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/home-decoration/decoration-swing/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 79,
+        "stock": 18
+      }
+    ]
+  },
+  {
+    "sourceId": 44,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Family Tree Photo Frame",
+    "sourceUrl": "https://dummyjson.com/products/44",
+    "title": "家谱树相框",
+    "kind": "相框",
+    "category": "家居",
+    "description": "树形轮廓，用于陈列家庭照片。",
+    "attributes": {
+      "用途": "照片陈列"
+    },
+    "image": "/media/products/44.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/home-decoration/family-tree-photo-frame/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 89,
+        "stock": 19
+      }
+    ]
+  },
+  {
+    "sourceId": 45,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "House Showpiece Plant",
+    "sourceUrl": "https://dummyjson.com/products/45",
+    "title": "桌面绿植摆件",
+    "kind": "摆件",
+    "category": "家居",
+    "description": "为桌面增添绿意的小摆件。",
+    "attributes": {
+      "用途": "装饰"
+    },
+    "image": "/media/products/45.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/home-decoration/house-showpiece-plant/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 49,
+        "stock": 20
+      }
+    ]
+  },
+  {
+    "sourceId": 46,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Plant Pot",
+    "sourceUrl": "https://dummyjson.com/products/46",
+    "title": "家用植物花盆",
+    "kind": "花盆",
+    "category": "家居",
+    "description": "用于摆放室内植物。",
+    "attributes": {
+      "空间": "客厅"
+    },
+    "image": "/media/products/46.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/home-decoration/plant-pot/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 39,
+        "stock": 5
+      }
+    ]
+  },
+  {
+    "sourceId": 47,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Table Lamp",
+    "sourceUrl": "https://dummyjson.com/products/47",
+    "title": "布罩阅读台灯",
+    "kind": "台灯",
+    "category": "家居",
+    "description": "用于书桌阅读和卧室氛围照明。",
+    "attributes": {
+      "用途": "阅读照明",
+      "空间": "书房"
+    },
+    "image": "/media/products/47.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/home-decoration/table-lamp/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 189,
+        "stock": 6
+      }
+    ]
+  },
+  {
+    "sourceId": 48,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Bamboo Spatula",
+    "sourceUrl": "https://dummyjson.com/products/48",
+    "title": "竹制锅铲",
+    "kind": "厨具",
+    "category": "家居",
+    "description": "用于家常翻炒。",
+    "attributes": {
+      "材质": "竹"
+    },
+    "image": "/media/products/48.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/kitchen-accessories/bamboo-spatula/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 29,
+        "stock": 7
+      }
+    ]
+  },
+  {
+    "sourceId": 49,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Black Aluminium Cup",
+    "sourceUrl": "https://dummyjson.com/products/49",
+    "title": "黑色铝制杯",
+    "kind": "杯子",
+    "category": "家居",
+    "description": "轻便的金属杯。",
+    "attributes": {
+      "材质": "铝"
+    },
+    "image": "/media/products/49.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/kitchen-accessories/black-aluminium-cup/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 39,
+        "stock": 8
+      }
+    ]
+  },
+  {
+    "sourceId": 50,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Black Whisk",
+    "sourceUrl": "https://dummyjson.com/products/50",
+    "title": "手动打蛋器",
+    "kind": "厨具",
+    "category": "家居",
+    "description": "方便混合蛋液与烘焙材料。",
+    "attributes": {
+      "用途": "烘焙"
+    },
+    "image": "/media/products/50.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/kitchen-accessories/black-whisk/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 25,
+        "stock": 9
+      }
+    ]
+  },
+  {
+    "sourceId": 51,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Boxed Blender",
+    "sourceUrl": "https://dummyjson.com/products/51",
+    "title": "台式搅拌机",
+    "kind": "厨房电器",
+    "category": "家居",
+    "description": "用于家用食材混合。",
+    "attributes": {
+      "方式": "台式"
+    },
+    "image": "/media/products/51.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/kitchen-accessories/boxed-blender/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 269,
+        "stock": 10
+      }
+    ]
+  },
+  {
+    "sourceId": 52,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Carbon Steel Wok",
+    "sourceUrl": "https://dummyjson.com/products/52",
+    "title": "碳钢炒锅",
+    "kind": "锅具",
+    "category": "家居",
+    "description": "适合家常翻炒。",
+    "attributes": {
+      "材质": "碳钢"
+    },
+    "image": "/media/products/52.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/kitchen-accessories/carbon-steel-wok/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 159,
+        "stock": 11
+      }
+    ]
+  },
+  {
+    "sourceId": 53,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Chopping Board",
+    "sourceUrl": "https://dummyjson.com/products/53",
+    "title": "厨房切菜板",
+    "kind": "厨具",
+    "category": "家居",
+    "description": "用于切配备菜。",
+    "attributes": {
+      "用途": "备菜"
+    },
+    "image": "/media/products/53.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/kitchen-accessories/chopping-board/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 59,
+        "stock": 12
+      }
+    ]
+  },
+  {
+    "sourceId": 54,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Citrus Squeezer Yellow",
+    "sourceUrl": "https://dummyjson.com/products/54",
+    "title": "黄色手动榨汁器",
+    "kind": "厨具",
+    "category": "家居",
+    "description": "用于榨取柑橘类果汁。",
+    "attributes": {
+      "颜色": "黄色"
+    },
+    "image": "/media/products/54.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/kitchen-accessories/citrus-squeezer-yellow/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 35,
+        "stock": 0
+      }
+    ]
+  },
+  {
+    "sourceId": 59,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Glass",
+    "sourceUrl": "https://dummyjson.com/products/59",
+    "title": "透明玻璃杯",
+    "kind": "杯子",
+    "category": "家居",
+    "description": "适合日常饮水。",
+    "attributes": {
+      "材质": "玻璃"
+    },
+    "image": "/media/products/59.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/kitchen-accessories/glass/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 29,
+        "stock": 14
+      }
+    ]
+  },
+  {
+    "sourceId": 61,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Hand Blender",
+    "sourceUrl": "https://dummyjson.com/products/61",
+    "title": "手持搅拌棒",
+    "kind": "厨房电器",
+    "category": "家居",
+    "description": "用于小份食材搅拌。",
+    "attributes": {
+      "方式": "手持"
+    },
+    "image": "/media/products/61.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/kitchen-accessories/hand-blender/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 139,
+        "stock": 15
+      }
+    ]
+  },
+  {
+    "sourceId": 73,
+    "source": "DummyJSON",
+    "version": "2026-11-27.1",
+    "sourceTitle": "Spice Rack",
+    "sourceUrl": "https://dummyjson.com/products/73",
+    "title": "厨房调料收纳架",
+    "kind": "收纳架",
+    "category": "家居",
+    "description": "将常用调料集中摆放。",
+    "attributes": {
+      "用途": "厨房收纳"
+    },
+    "image": "/media/products/73.webp",
+    "sourceImage": "https://cdn.dummyjson.com/product-images/kitchen-accessories/spice-rack/1.webp",
+    "skus": [
+      {
+        "label": "标准款",
+        "price": 79,
+        "stock": 16
+      }
+    ]
+  }
+]

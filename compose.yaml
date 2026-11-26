@@ -1,0 +1,19 @@
+name: shopwise
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: shopwise
+      POSTGRES_USER: shopwise
+      POSTGRES_PASSWORD: shopwise
+    ports:
+      - "127.0.0.1:${SHOPWISE_DB_PORT:-15439}:5432"
+    volumes:
+      - shopwise-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopwise -d shopwise"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  shopwise-data:
