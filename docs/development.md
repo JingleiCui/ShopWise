@@ -24,6 +24,10 @@ Windows x64 在 PowerShell 使用 `./shopwise.cmd`，macOS Intel 与 Apple Silic
 
 默认使用 Compose。已安装 PostgreSQL 17 的机器可使用 `--db-mode external` 并准备本机数据库 `shopwise`、同名角色（默认开发密码 `shopwise`）；`--db-port` 会同时设置 Java、Python 客户端的默认连接。自定义库名或连接时，同时提供匹配的 `DB_URL`（JDBC）、`DATABASE_URL`（PostgreSQL URI）、`DB_USER` 和 `DB_PASSWORD`。显式服务 URL 和数据库 URL 会覆盖从端口派生的默认 URL。建议把自定义连接统一放在 `.env.local` 并在切换环境时重新核对。迁移外部本地库另需 `pg_dump` 和 `pg_restore`，客户端主版本应与服务端一致。
 
+已有 PostgreSQL 17 工具且没有 Docker 时，可在 `.env.local` 设置 `SHOPWISE_DB_MODE=native` 和 `SHOPWISE_PG_BIN`。启动器会在 `.local/postgres/<项目名>` 初始化独立开发库，通过环回地址和密码连接默认的 `postgres` 库。首次启动前可设置 `DB_USER`、`DB_PASSWORD`；已初始化的开发库沿用原有角色和密码。常规 `stop` 保留数据库进程与本地数据。原生模式同样需要客户端工具才可执行导出或导入。
+
+工具放在非标准安装路径时，可以在同一文件设置 `JAVA_HOME`、`SHOPWISE_UV`（uv 可执行文件）、`SHOPWISE_UV_PYTHON`（Python 3.12 可执行文件）和 `SHOPWISE_NPM_CLI`（用 Node 执行的 npm-cli.js）。本机绝对路径和数据库密码只保存在 `.env.local`。
+
 ## 跨机转移开发数据
 
 在源、目标两边使用同一 Git 版本与 PostgreSQL 主版本。先停止正在运行的 ShopWise。以下命令使用 macOS 入口，Windows 将首项替换为 `./shopwise.cmd`。

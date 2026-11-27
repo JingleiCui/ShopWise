@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.*;
 import java.time.Duration;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.ObjectMapper;
@@ -17,15 +16,15 @@ import tools.jackson.databind.JsonNode;
 class ShopifyRefundReceipts {
     private final JdbcTemplate db;
     private final ObjectMapper json;
-    private final String adminToken;
+    private final ShopifyAdminToken adminToken;
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
 
-    ShopifyRefundReceipts(JdbcTemplate db,ObjectMapper json,@Value("${SHOPIFY_ADMIN_TOKEN:}") String adminToken) {
+    ShopifyRefundReceipts(JdbcTemplate db,ObjectMapper json,ShopifyAdminToken adminToken) {
         this.db=db; this.json=json; this.adminToken=adminToken;
     }
 
     void refresh(String shop,String receipt,String order,String line,int quantity) {
-        if (adminToken.isBlank()) return;
+        if (!adminToken.enabled()) return;
         String query="""
             query($id:ID!) { refund(id:$id) {
               id createdAt order { id } duties { amountSet { shopMoney { amount } } }
@@ -37,11 +36,12 @@ class ShopifyRefundReceipts {
               } }
             } }
             """;
-        var req=HttpRequest.newBuilder(URI.create("https://"+shop+"/admin/api/2026-10/graphql.json"))
-            .timeout(Duration.ofSeconds(5)).header("Content-Type","application/json").header("X-Shopify-Access-Token",adminToken)
-            .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(Map.of("query",query,"variables",Map.of("id",receipt))))).build();
         try {
+            var req=HttpRequest.newBuilder(URI.create("https://"+shop+"/admin/api/2026-10/graphql.json"))
+                .timeout(Duration.ofSeconds(5)).header("Content-Type","application/json").header("X-Shopify-Access-Token",adminToken.get())
+                .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(Map.of("query",query,"variables",Map.of("id",receipt))))).build();
             var res=http.send(req,HttpResponse.BodyHandlers.ofString());
+            if (res.statusCode()==401) adminToken.invalidate();
             if (res.statusCode()!=200) throw new java.io.IOException();
             var envelope=json.readTree(res.body());
             if (envelope.has("errors")) throw new java.io.IOException();

@@ -1,6 +1,7 @@
 """Portable, versioned logical backups of the local ShopWise development DB."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -25,7 +26,9 @@ def pg_command(env, name, compose):
         raise ValueError("跨机导入导出仅支持本机 PostgreSQL 开发库")
     if url.query or not url.path.strip("/"):
         raise ValueError("本地迁移需要无查询参数且有库名的 DATABASE_URL")
-    client = shutil.which(name, path=env["PATH"])
+    bin_dir = env.get("SHOPWISE_PG_BIN")
+    search_path = bin_dir + os.pathsep + env["PATH"] if bin_dir else env["PATH"]
+    client = shutil.which(name, path=search_path)
     if not client:
         raise ValueError(f"请安装 PostgreSQL 客户端 {name}")
     credentials = {"PGHOST": url.hostname, "PGPORT": str(url.port or 5432),

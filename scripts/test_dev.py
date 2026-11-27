@@ -42,6 +42,19 @@ class LauncherTests(unittest.TestCase):
             self.assertEqual(dev.active_state(local), {})
             self.assertFalse((local / "stop-old").exists())
 
+    def test_native_database_does_not_reuse_unrelated_listening_port(self):
+        with temporary_root() as root, socket.socket() as other:
+            other.bind((dev.HOST, 0))
+            other.listen()
+            port = str(other.getsockname()[1])
+            env = dev.environment(dev.parser().parse_args(["--db-mode", "native", "--db-port", port]))
+            self.assertTrue(env["DB_URL"].endswith(f":{port}/postgres"))
+            with patch.object(dev, "pg_tool", return_value="pg_ctl"), patch.object(dev, "run") as run:
+                with self.assertRaisesRegex(ValueError, "已被其他程序占用"):
+                    dev.native_database(env)
+                run.assert_not_called()
+                self.assertFalse((root / ".local" / "postgres").exists())
+
     def test_archive_roundtrip_and_checksum(self):
         with temporary_root() as root:
             archive, dump = root / "数据.swdb", root / "out.dump"

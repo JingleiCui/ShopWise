@@ -2,6 +2,8 @@
 
 截至 2026-11-27。协作中可以确认账号角色、店铺域名和审批状态。Client Secret、Admin Token、Webhook Secret 等敏感值请由账号所有者直接放入部署密钥管理器。
 
+先联调开发店或 eBay Sandbox 时，按 [沙箱联调指南](sandbox.md) 配置。本页的生产准入分开办理。
+
 ## Shopify 跨店目录
 
 1. 在 Shopify Dev Dashboard 的 **Catalogs** 完成组织或身份验证（如果面板提示），为 ShopWise 创建 API key，并确认 `read_global_api_catalog_search`。

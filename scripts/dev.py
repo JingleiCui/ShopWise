@@ -11,6 +11,7 @@ import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 import urllib.request
@@ -60,8 +61,8 @@ def environment(args):
     if len({env[key] for key, _ in PORTS.values()}) != len(PORTS):
         raise ValueError("数据库、API、Agent 和网页需要不同的端口")
     env["SHOPWISE_DB_MODE"] = args.db_mode or env.get("SHOPWISE_DB_MODE", "compose")
-    if env["SHOPWISE_DB_MODE"] not in ("compose", "external"):
-        raise ValueError("SHOPWISE_DB_MODE 需要 compose 或 external")
+    if env["SHOPWISE_DB_MODE"] not in ("compose", "external", "native"):
+        raise ValueError("SHOPWISE_DB_MODE 需要 compose、external 或 native")
     env["COMPOSE_PROJECT_NAME"] = args.project or env.get("COMPOSE_PROJECT_NAME", "shopwise")
     if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", env["COMPOSE_PROJECT_NAME"]):
         raise ValueError("Compose 项目名仅支持小写字母、数字、下划线与连字符")
@@ -80,10 +81,11 @@ def environment(args):
     env.setdefault("DB_USER", "shopwise")
     env.setdefault("DB_PASSWORD", "shopwise")
     hostport = f"{HOST}:{env['SHOPWISE_DB_PORT']}"
-    env.setdefault("DB_URL", f"jdbc:postgresql://{hostport}/shopwise")
+    db_name = "postgres" if env["SHOPWISE_DB_MODE"] == "native" else "shopwise"
+    env.setdefault("DB_URL", f"jdbc:postgresql://{hostport}/{db_name}")
     user = quote(env["DB_USER"], safe="")
     password = quote(env["DB_PASSWORD"], safe="")
-    env.setdefault("DATABASE_URL", f"postgresql://{user}:{password}@{hostport}/shopwise")
+    env.setdefault("DATABASE_URL", f"postgresql://{user}:{password}@{hostport}/{db_name}")
     env.setdefault("COMMERCE_URL", f"http://{HOST}:{env['PORT']}")
     env.setdefault("SHOPWISE_API_URL", env["COMMERCE_URL"])
     env.setdefault("AGENT_URL", f"http://{HOST}:{env['AGENT_PORT']}")
@@ -92,7 +94,8 @@ def environment(args):
 
 
 def binary(name, env):
-    executable = shutil.which(name, path=env["PATH"])
+    candidate = env.get("SHOPWISE_UV", name) if name == "uv" else name
+    executable = shutil.which(candidate, path=env.get("PATH", ""))
     if not executable:
         raise ValueError(f"找不到 {name}，请检查 PATH 并运行 doctor")
     return executable
@@ -110,15 +113,67 @@ def compose(env, *args):
 def database(env):
     if env["SHOPWISE_DB_MODE"] == "compose":
         run(compose(env, "up", "-d", "--wait", "db"), env)
+    elif env["SHOPWISE_DB_MODE"] == "native":
+        native_database(env)
+
+
+def pg_tool(name, env):
+    folder = env.get("SHOPWISE_PG_BIN")
+    if not folder:
+        return binary(name, env)
+    executable = Path(folder) / (name + (".exe" if WINDOWS else ""))
+    if not executable.is_file():
+        raise ValueError(f"SHOPWISE_PG_BIN 中找不到 {executable.name}")
+    return str(executable)
+
+
+def native_database(env):
+    port = env["SHOPWISE_DB_PORT"]
+    directory = ROOT / ".local" / "postgres" / env["COMPOSE_PROJECT_NAME"]
+    if directory.is_symlink() or directory.parent.is_symlink():
+        raise ValueError("原生开发数据库目录不能使用符号链接")
+    control = [pg_tool("pg_ctl", env), "-D", str(directory)]
+    initialized = (directory / "PG_VERSION").is_file()
+    if initialized:
+        status = subprocess.run([*control, "status"], env=env, capture_output=True, timeout=10)
+        if status.returncode == 0:
+            pid_lines = (directory / "postmaster.pid").read_text(encoding="utf-8").splitlines()
+            if len(pid_lines) < 4 or pid_lines[3] != port:
+                raise ValueError("该项目的原生 PostgreSQL 正在使用其他端口")
+            return
+        if status.returncode != 3:
+            raise ValueError("无法确认原生 PostgreSQL 的运行状态，请查看 postgresql.log")
+    with socket.socket() as sock:
+        sock.settimeout(.3)
+        if sock.connect_ex((HOST, int(port))) == 0:
+            raise ValueError(f"数据库端口 {port} 已被其他程序占用")
+    if not initialized:
+        directory.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory() as secret_folder:
+            secret = Path(secret_folder) / "postgres-password"
+            secret.write_text(env["DB_PASSWORD"] + "\n", encoding="utf-8")
+            run([pg_tool("initdb", env), "-D", directory, "-U", env["DB_USER"], "--encoding=UTF8",
+                 "--locale=C", "--auth=scram-sha-256", f"--pwfile={secret}"], env)
+    run([*control, "-l", directory / "postgresql.log", "-o", f"-h {HOST} -p {port}", "-w", "start"], env)
+
+
+def npm_command(env):
+    cli = env.get("SHOPWISE_NPM_CLI")
+    if cli:
+        if not Path(cli).is_file():
+            raise ValueError("SHOPWISE_NPM_CLI 必须指向可读的 npm-cli.js")
+        return [binary("node", env), cli]
+    return [binary("npm.cmd" if WINDOWS else "npm", env)]
 
 
 def init(env):
     database(env)
     run([MAVEN, "-q", "package"], env, ROOT / "commerce-api")
-    run([binary("uv", env), "sync", "--frozen", "--python", "3.12"], env, ROOT / "agent-service")
-    npm = binary("npm.cmd" if WINDOWS else "npm", env)
-    run([npm, "ci", "--no-audit", "--no-fund"], env, ROOT / "web")
-    run([npm, "run", "build"], env, ROOT / "web")
+    python = env.get("SHOPWISE_UV_PYTHON", "3.12")
+    run([binary("uv", env), "sync", "--frozen", "--python", python], env, ROOT / "agent-service")
+    npm = npm_command(env)
+    run([*npm, "ci", "--no-audit", "--no-fund"], env, ROOT / "web")
+    run([*npm, "run", "build"], env, ROOT / "web")
 
 
 def doctor(env):
@@ -132,13 +187,21 @@ def doctor(env):
     if env["SHOPWISE_DB_MODE"] == "compose":
         checks += [("Docker daemon", ["docker", "info", "--format", "{{.ServerVersion}}"], r"(\d+)", 1),
                    ("Docker Compose v2", ["docker", "compose", "version", "--short"], r"(\d+)", 2)]
+    elif env["SHOPWISE_DB_MODE"] == "native":
+        checks += [(name, [name, "--version"], r"(\d+)", 17) for name in ("pg_ctl", "initdb")]
     else:
-        checks += [(name, [name, "--version"], r"(\d+)", 1) for name in ("pg_dump", "pg_restore")]
+        print("INFO 导出或导入外部 PostgreSQL 时需安装 pg_dump 和 pg_restore")
     print(f"{platform.system()} {platform.machine()} / Python {platform.python_version()} / DB {env['SHOPWISE_DB_MODE']}")
     errors = []
     for label, argv, pattern, floor in checks:
         try:
-            result = run([binary(argv[0], env), *argv[1:]], env, stdout=subprocess.PIPE,
+            if label == "npm":
+                command = [*npm_command(env), "--version"]
+            elif label in ("pg_ctl", "initdb"):
+                command = [pg_tool(argv[0], env), *argv[1:]]
+            else:
+                command = [binary(argv[0], env), *argv[1:]]
+            result = run(command, env, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT, text=True, errors="replace", timeout=12)
             match = re.search(pattern, result.stdout)
             if not match or int(match[1]) < floor:
@@ -337,7 +400,7 @@ def parser():
     for name in PORTS:
         cli.add_argument("--" + name + "-port", type=int)
     cli.add_argument("--project", help="隔离本地实例和 Compose 项目")
-    cli.add_argument("--db-mode", choices=("compose", "external"))
+    cli.add_argument("--db-mode", choices=("compose", "external", "native"))
     cli.add_argument("--confirm-reset", action="store_true")
     cli.add_argument("--confirm-import", action="store_true")
     return cli

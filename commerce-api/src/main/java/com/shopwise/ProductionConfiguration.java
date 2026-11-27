@@ -7,17 +7,9 @@ import org.springframework.core.env.Environment;
 @Configuration
 @Profile("prod")
 class ProductionConfiguration {
-    @org.springframework.context.annotation.Bean
-    org.springframework.session.web.http.CookieSerializer productionCookieSerializer() {
-        var cookie=new org.springframework.session.web.http.DefaultCookieSerializer();
-        cookie.setUseSecureCookie(true);
-        cookie.setUseHttpOnlyCookie(true);
-        cookie.setSameSite("Lax");
-        return cookie;
-    }
-
     ProductionConfiguration(Environment env) {
-        if (env.matchesProfiles("load-fixture")) throw new IllegalStateException("Load fixtures are unavailable in production");
+        if (env.matchesProfiles("load-fixture", "sandbox"))
+            throw new IllegalStateException("Development profiles are unavailable in production");
         String secret=env.getProperty("SERVICE_KEY","");
         if (secret.length()<32 || "local-shopwise-agent".equals(secret))
             throw new IllegalStateException("Production requires SERVICE_KEY with at least 32 characters");

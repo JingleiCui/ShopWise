@@ -23,7 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 class SecurityConfig {
   @Bean
   UserDetailsService users(javax.sql.DataSource data, org.springframework.core.env.Environment environment) {
-    if (environment.matchesProfiles("prod")) return new org.springframework.security.provisioning.JdbcUserDetailsManager(data);
+    if (environment.matchesProfiles("prod", "sandbox")) return new org.springframework.security.provisioning.JdbcUserDetailsManager(data);
     var encoder = new BCryptPasswordEncoder();
     var users = new InMemoryUserDetailsManager();
     for (String name : new String[] {"buyer", "buyer2", "staff"})
@@ -53,7 +53,7 @@ class SecurityConfig {
                 auth.requestMatchers("/api/v1/merchant/staff/**").hasRole("STAFF");
                 auth.requestMatchers("/api/v1/merchant/**").hasRole("BUYER");
                 auth.requestMatchers(HttpMethod.GET,"/api/csrf","/api/v1/discovery","/api/v1/discovery/**").permitAll();
-                if (env.matchesProfiles("prod")) {
+                if (env.matchesProfiles("prod", "sandbox")) {
                   auth.requestMatchers("/api/products/**","/api/chat/**","/api/policies","/api/cart/**","/api/quotes/**","/api/orders/**","/api/returns/**","/api/staff/**").denyAll();
                 }
                 auth.requestMatchers("/api/login", "/api/health", "/error")

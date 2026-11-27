@@ -15,19 +15,20 @@ import tools.jackson.databind.*;
 class ShopifyReconciliation {
     private final JdbcTemplate db;
     private final ObjectMapper json;
-    private final String shop,token;
+    private final String shop;
+    private final ShopifyAdminToken token;
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
 
     ShopifyReconciliation(JdbcTemplate db,ObjectMapper json,@Value("${SHOPIFY_PILOT_SHOP:}") String shop,
-                          @Value("${SHOPIFY_ADMIN_TOKEN:}") String token) {
+                          ShopifyAdminToken token) {
         this.db=db; this.json=json; this.shop=shop; this.token=token;
-        if (!token.isBlank() && !shop.matches("[a-z0-9][a-z0-9-]*\\.myshopify\\.com"))
+        if (token.enabled() && !shop.matches("[a-z0-9][a-z0-9-]*\\.myshopify\\.com"))
             throw new IllegalArgumentException("Reconciliation requires a verified pilot shop domain");
     }
 
     @Scheduled(initialDelay=30000,fixedDelay=300000)
     void reconcile() {
-        if (token.isBlank()) return;
+        if (!token.enabled()) return;
         var watermark=db.query("select watermark from merchant_sync where shop=?",
             (r,i)->r.getObject(1,OffsetDateTime.class),shop);
         var until=OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(1);
@@ -72,9 +73,10 @@ class ShopifyReconciliation {
             """;
         Map<String,String> vars=cursor==null?Map.of("query",filter):Map.of("query",filter,"cursor",cursor);
         var request=HttpRequest.newBuilder(URI.create("https://"+shop+"/admin/api/2026-10/graphql.json"))
-            .timeout(Duration.ofSeconds(8)).header("Content-Type","application/json").header("X-Shopify-Access-Token",token)
+            .timeout(Duration.ofSeconds(8)).header("Content-Type","application/json").header("X-Shopify-Access-Token",token.get())
             .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(Map.of("query",query,"variables",vars)))).build();
         var response=http.send(request,HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode()==401) token.invalidate();
         if (response.statusCode()!=200) throw new IOException("Admin orders unavailable");
         var result=json.readTree(response.body());
         if (result.has("errors") || !result.path("data").hasNonNull("orders")) throw new IOException("Admin orders query failed");

@@ -16,7 +16,9 @@ class ShopifyCatalog implements CatalogProvider {
     private final URI endpoint;
     private final String profile;
     private final ShopifyCatalogToken tokens;
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
+    private final HttpClient http = HttpClient.newBuilder()
+        .version(HttpClient.Version.HTTP_1_1)
+        .connectTimeout(Duration.ofSeconds(6)).build();
     private static final Map<String,String> CONTEXT = Map.of("address_country","CN","currency","CNY");
     private static final Map<String,Object> FILTERS = Map.of("ships_to",Map.of("country","CN"),"available",true);
 
@@ -43,7 +45,7 @@ class ShopifyCatalog implements CatalogProvider {
     private List<Offer> call(String tool, Map<String,Object> catalog) throws Exception {
         var input = Map.of("jsonrpc","2.0","id",1,"method","tools/call","params",Map.of("name",tool,
             "arguments",Map.of("catalog",catalog,"meta",Map.of("ucp-agent",Map.of("profile",profile)))));
-        var request = HttpRequest.newBuilder(endpoint).timeout(Duration.ofSeconds(7))
+        var request = HttpRequest.newBuilder(endpoint).timeout(Duration.ofMillis(7500))
             .header("Content-Type","application/json").header("Accept","application/json, text/event-stream")
             .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(input)));
         String token=tokens.get();

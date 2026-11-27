@@ -13,7 +13,7 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 @Component
-@org.springframework.context.annotation.Profile("!prod")
+@org.springframework.context.annotation.Profile("!prod & !sandbox")
 public class CatalogSeed implements ApplicationRunner {
   record Sku(String label, BigDecimal price, int stock) {}
 
