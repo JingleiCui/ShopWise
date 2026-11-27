@@ -84,11 +84,17 @@ export const states: Record<string, string> = {
   REJECTED: "已驳回",
   REFUNDED: "已退款",
 };
+async function writeHeaders(): Promise<Record<string,string>> {
+  const res=await fetch("/api/csrf",{cache:"no-store",credentials:"same-origin"});
+  if (!res.ok) throw Error("无法获取操作凭据，请刷新页面");
+  const csrf=await res.json();
+  return { [csrf.header]: csrf.token, "Content-Type":"application/json" };
+}
 export async function api(path: string, method = "GET", body?: unknown) {
   const r = await fetch("/api" + path, {
     method,
     credentials: "same-origin",
-    headers: body === undefined ? {} : { "Content-Type": "application/json" },
+    headers: method === "GET" ? {} : await writeHeaders(),
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const data = await r.json().catch(() => null);
@@ -140,7 +146,7 @@ export async function stream(
 ) {
   const r = await fetch("/api/chat/stream", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await writeHeaders(),
     body: JSON.stringify({ message, requestId, confirmedQuoteId }),
   });
   if (!r.ok || !r.body)

@@ -17,6 +17,7 @@ from psycopg_pool import ConnectionPool
 from pydantic import BaseModel, Field
 
 import config
+import discovery
 from adapters import Tools, runtime
 from shopping import api, execute, part, result
 
@@ -67,10 +68,21 @@ async def lifespan(app):
         saver = PostgresSaver(pool)
         saver.setup()
         app.state.graph = graph_for(saver)
+        app.state.discovery = discovery.graph_for(saver)
         yield
 
 app = FastAPI(title="ShopWise Agent",lifespan=lifespan)
 locks = [Lock() for _ in range(128)]
+
+class SearchTurn(BaseModel):
+    threadId: str = Field(min_length=1,max_length=64)
+    message: str = Field(min_length=1,max_length=400)
+
+@app.post("/discovery/turn")
+def discovery_turn(turn: SearchTurn, request: Request, x_service_key: str = Header(default="")):
+    if not hmac.compare_digest(x_service_key.encode(),config.SERVICE_KEY.encode()):
+        raise HTTPException(403,"需要服务身份")
+    return discovery.turn(request.app.state.discovery,turn.threadId,turn.message)
 
 @app.get("/health")
 def health():
@@ -107,12 +119,12 @@ def process(graph, turn):
     return value["response"]
 
 @app.post("/turn")
-def turn_endpoint(turn: Turn, request: Request, x_service_key: str = Header(default=""),cookie: str = Header(default="")):
-    if not hmac.compare_digest(x_service_key.encode(),config.SERVICE_KEY.encode()) or not cookie:
+def turn_endpoint(turn: Turn, request: Request, x_service_key: str = Header(default=""),x_shopwise_grant: str = Header(default="")):
+    if not hmac.compare_digest(x_service_key.encode(),config.SERVICE_KEY.encode()) or not x_shopwise_grant:
         raise HTTPException(403,"需要已认证的商城会话。")
     start = time.monotonic()
     metrics = {"mode":configured_mode(),"tools":[],"tokens":0}
-    tools = Tools(cookie,metrics,turn.requestId)
+    tools = Tools(x_shopwise_grant,metrics,turn.requestId)
     token = runtime.set(tools)
     try:
         with locks[hash(turn.threadId)%len(locks)]:

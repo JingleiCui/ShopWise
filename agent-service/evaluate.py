@@ -28,7 +28,7 @@ class Demo(Tools):
         self.orders = [{"id":"SW-DEMO-001","status":"COMPLETED","events":[{"status":"COMPLETED","at":datetime.now(timezone.utc).isoformat()}],
                         "lines":[{"skuId":470,"quantity":2}],"total":378}]
         self.products = []
-        for i,p in enumerate(json.loads(FIXTURE.read_text())):
+        for i,p in enumerate(json.loads(FIXTURE.read_text(encoding="utf-8"))):
             p["id"] = p["sourceId"]
             for index,s in enumerate(p["skus"]):
                 s["id"] = p["id"]*10 + index

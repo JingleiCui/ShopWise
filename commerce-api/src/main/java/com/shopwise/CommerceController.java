@@ -42,7 +42,7 @@ class CommerceController {
   }
 
   @GetMapping("/quotes/{id}")
-  Map<String, Object> quote(Authentication auth, @PathVariable String id) {
+  Map<String, Object> getQuote(Authentication auth, @PathVariable String id) {
     return commerce.getQuote(auth.getName(), id);
   }
 

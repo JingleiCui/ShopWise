@@ -22,7 +22,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Configuration
 class SecurityConfig {
   @Bean
-  InMemoryUserDetailsManager users() {
+  UserDetailsService users(javax.sql.DataSource data, org.springframework.core.env.Environment environment) {
+    if (environment.matchesProfiles("prod")) return new org.springframework.security.provisioning.JdbcUserDetailsManager(data);
     var encoder = new BCryptPasswordEncoder();
     var users = new InMemoryUserDetailsManager();
     for (String name : new String[] {"buyer", "buyer2", "staff"})
@@ -35,17 +36,26 @@ class SecurityConfig {
   }
 
   @Bean
-  AuthenticationManager authenticationManager(InMemoryUserDetailsManager users) {
+  AuthenticationManager authenticationManager(UserDetailsService users) {
     return new ProviderManager(
         new org.springframework.security.authentication.dao.DaoAuthenticationProvider(users));
   }
 
   @Bean
-  SecurityFilterChain security(HttpSecurity http) throws Exception {
-    http.csrf(csrf -> csrf.disable())
+  SecurityFilterChain security(HttpSecurity http, AgentGrants grants, org.springframework.core.env.Environment env) throws Exception {
+    http.addFilterBefore(grants.filter(), org.springframework.security.web.csrf.CsrfFilter.class)
+        .csrf(csrf -> csrf.ignoringRequestMatchers(req -> Boolean.TRUE.equals(req.getAttribute(AgentGrants.VERIFIED)) ||
+            ("POST".equals(req.getMethod()) && "/webhooks/shopify".equals(req.getRequestURI()))))
         .logout(logout -> logout.disable())
         .authorizeHttpRequests(
-            auth ->
+            auth -> {
+                auth.requestMatchers(HttpMethod.POST,"/api/v1/assistant/turn","/webhooks/shopify").permitAll();
+                auth.requestMatchers("/api/v1/merchant/staff/**").hasRole("STAFF");
+                auth.requestMatchers("/api/v1/merchant/**").hasRole("BUYER");
+                auth.requestMatchers(HttpMethod.GET,"/api/csrf","/api/v1/discovery","/api/v1/discovery/**").permitAll();
+                if (env.matchesProfiles("prod")) {
+                  auth.requestMatchers("/api/products/**","/api/chat/**","/api/policies","/api/cart/**","/api/quotes/**","/api/orders/**","/api/returns/**","/api/staff/**").denyAll();
+                }
                 auth.requestMatchers("/api/login", "/api/health", "/error")
                     .permitAll()
                     .requestMatchers(
@@ -69,7 +79,7 @@ class SecurityConfig {
                         "/api/orders/*/returns")
                     .hasRole("BUYER")
                     .anyRequest()
-                    .authenticated())
+                    .authenticated(); })
         .exceptionHandling(
             errors ->
                 errors
@@ -91,7 +101,9 @@ class SecurityConfig {
 class SessionController {
   private final AuthenticationManager users;
 
-  SessionController(AuthenticationManager users) {
+  private final AgentGrants grants;
+  SessionController(AuthenticationManager users, AgentGrants grants) {
+    this.grants = grants;
     this.users = users;
   }
 
@@ -108,7 +120,10 @@ class SessionController {
     } catch (org.springframework.security.core.AuthenticationException e) {
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "用户名或密码错误");
     }
-    if (req.getSession(false) != null) req.getSession(false).invalidate();
+    if (req.getSession(false) != null) {
+      grants.logout(req.getSession(false).getId());
+      req.getSession(false).invalidate();
+    }
     var context = SecurityContextHolder.createEmptyContext();
     context.setAuthentication(user);
     SecurityContextHolder.setContext(context);
@@ -127,9 +142,18 @@ class SessionController {
 
   @PostMapping("/logout")
   Map<String, Boolean> logout(HttpServletRequest req) {
-    if (req.getSession(false) != null) req.getSession(false).invalidate();
+    if (req.getSession(false) != null) {
+      grants.logout(req.getSession(false).getId());
+      req.getSession(false).invalidate();
+    }
     SecurityContextHolder.clearContext();
     return Map.of("ok", true);
+  }
+
+  @GetMapping("/csrf")
+  Map<String,String> csrf(org.springframework.security.web.csrf.CsrfToken token, HttpServletResponse response) {
+    response.setHeader("Cache-Control","no-store");
+    return Map.of("header",token.getHeaderName(),"token",token.getToken());
   }
 
   @GetMapping("/health")

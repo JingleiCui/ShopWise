@@ -16,7 +16,7 @@ import java.net.http.*;
 import java.security.Principal;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.locks.ReentrantLock;
+
 
 @RestController
 @RequestMapping("/api")
@@ -30,17 +30,18 @@ class ChatGateway {
     private final URI endpoint;
     private final String serviceKey;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(4)).build();
-    // Serialize turns and staff handoffs per conversation in the local single-instance server.
-    private final ReentrantLock[] locks = new ReentrantLock[32];
+    private final ConversationLocks locks;
+    private final AgentGrants grants;
 
-    ChatGateway(JdbcTemplate db, ObjectMapper json,
+    ChatGateway(JdbcTemplate db, ObjectMapper json, ConversationLocks locks, AgentGrants grants,
                 @Value("${AGENT_URL:http://127.0.0.1:18082}") String agentUrl,
                 @Value("${SERVICE_KEY:local-shopwise-agent}") String serviceKey) {
         this.db = db;
         this.json = json;
         this.endpoint = URI.create(agentUrl + "/turn");
         this.serviceKey = serviceKey;
-        Arrays.setAll(locks, i -> new ReentrantLock(true));
+        this.locks=locks;
+        this.grants=grants;
     }
 
     private UUID thread(String buyer) {
@@ -48,9 +49,6 @@ class ChatGateway {
         return db.queryForObject("select id from chat_threads where buyer=?", UUID.class, buyer);
     }
 
-    private ReentrantLock lock(UUID id) {
-        return locks[Math.floorMod(id.hashCode(), locks.length)];
-    }
 
     private Map<String, Object> message(long id, String role, String payload) {
         Map<String, Object> result = json.readValue(payload, OBJECT);
@@ -81,27 +79,19 @@ class ChatGateway {
 
     @PostMapping("/staff/chats/{id}/{action:takeover|release}")
     Map<String, Object> handoff(@PathVariable UUID id, @PathVariable String action) {
-        var guard = lock(id);
-        guard.lock();
-        try {
+        try (var guard = locks.acquire(id)) {
             db.update("update chat_threads set taken_over=? where id=?", action.equals("takeover"), id);
             return conversation(id);
-        } finally {
-            guard.unlock();
         }
     }
 
     @PostMapping("/staff/chats/{id}/reply")
     Map<String, Object> reply(@PathVariable UUID id, @RequestBody Reply reply) {
         String text = validated(reply.text());
-        var guard = lock(id);
-        guard.lock();
-        try {
+        try (var guard = locks.acquire(id)) {
             if (!Boolean.TRUE.equals(conversation(id).get("takenOver")))
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "请先接管此会话");
             return append(id, "staff", null, Map.of("text", text));
-        } finally {
-            guard.unlock();
         }
     }
 
@@ -124,7 +114,7 @@ class ChatGateway {
             (r,i) -> message(r.getLong(1),r.getString(2),r.getString(3)), threadId, role, requestId).stream().findFirst();
     }
 
-    private Map<String, Object> runAgent(UUID id, Turn turn, String text, String cookie) throws IOException, InterruptedException {
+    private Map<String, Object> runAgent(UUID id, Turn turn, String text, String grant) throws IOException, InterruptedException {
         var body = new LinkedHashMap<String,Object>();
         body.put("threadId", id);
         body.put("message", text);
@@ -132,7 +122,7 @@ class ChatGateway {
         if (turn.confirmedQuoteId() != null) body.put("confirmedQuoteId", turn.confirmedQuoteId());
         var request = HttpRequest.newBuilder(endpoint).timeout(Duration.ofSeconds(100))
             .header("X-Service-Key", serviceKey).header("Content-Type", "application/json")
-            .header("Cookie", cookie)
+            .header(AgentGrants.HEADER, grant)
             .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body))).build();
         var response = http.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) throw new IOException("Agent HTTP " + response.statusCode());
@@ -151,16 +141,14 @@ class ChatGateway {
     void stream(Principal user, @RequestBody Turn turn, HttpServletRequest request, HttpServletResponse response) throws IOException {
         String text = validated(turn.message());
         if (turn.requestId() == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "缺少请求编号");
-        String cookie = request.getSession(false) == null ? "" : "JSESSIONID=" + request.getSession(false).getId();
+        String sessionId = request.getSession().getId();
         UUID id = thread(user.getName());
         response.setCharacterEncoding("UTF-8");
         response.setContentType("text/event-stream");
         response.setHeader("Cache-Control", "no-store");
         response.setHeader("X-Accel-Buffering", "no");
         emit(response, "status", Map.of("text", "正在处理本次请求…"));
-        var guard = lock(id);
-        guard.lock();
-        try {
+        try (var guard = locks.acquire(id)) {
             var cached = existing(id, "assistant", turn.requestId());
             if (cached.isPresent()) {
                 emit(response, "message", cached.get());
@@ -169,9 +157,13 @@ class ChatGateway {
             if (existing(id, "user", turn.requestId()).isEmpty())
                 append(id, "user", turn.requestId(), Map.of("text", text));
             boolean taken = Boolean.TRUE.equals(db.queryForObject("select taken_over from chat_threads where id=?",Boolean.class,id));
-            Map<String, Object> answer = taken
-                ? Map.of("text", "消息已送达店员。", "mode", "staff")
-                : runAgent(id, turn, text, cookie);
+            Map<String,Object> answer;
+            if (taken) answer=Map.of("text","消息已送达店员。","mode","staff");
+            else {
+                String grant=grants.issue(user.getName(),sessionId,turn.requestId());
+                try { answer=runAgent(id,turn,text,grant); }
+                finally { grants.revoke(grant); }
+            }
             if (Boolean.TRUE.equals(answer.get("handoff")))
                 db.update("update chat_threads set taken_over=true where id=?", id);
             // Third-party offers are shown for this turn only. The transcript retains local receipts.
@@ -180,13 +172,13 @@ class ChatGateway {
             var saved = append(id, "assistant", turn.requestId(), persistentAnswer);
             if (external != null) saved.put("external", external);
             emit(response, "message", saved);
+        } catch (ResponseStatusException e) {
+            emit(response, "error", Map.of("message", Objects.requireNonNullElse(e.getReason(), "会话暂不可用")));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             emit(response, "error", Map.of("message", "请求已中断，可重试本条消息。"));
         } catch (IOException e) {
             emit(response, "error", Map.of("message", "导购服务暂时无法响应，可重试或继续浏览商城。"));
-        } finally {
-            guard.unlock();
         }
     }
 }

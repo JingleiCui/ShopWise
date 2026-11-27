@@ -1,0 +1,6 @@
+/shopwise text eol=lf
+*.cmd text eol=crlf
+/commerce-api/mvnw text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

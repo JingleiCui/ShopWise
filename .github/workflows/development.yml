@@ -1,0 +1,98 @@
+name: Development environments
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+env:
+  SHOPWISE_DB_MODE: external
+  SHOPWISE_DB_PORT: "25439"
+  PORT: "28081"
+  AGENT_PORT: "28082"
+  SHOPWISE_WEB_PORT: "25173"
+  SHOPWISE_DB_TESTS: "true"
+  AGENT_MODE: offline
+  PGPASSWORD: shopwise
+  PYTHONUTF8: "1"
+
+jobs:
+  services:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: 商城 ShopWise
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: 商城 ShopWise
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+      - uses: ikalnytskyi/action-setup-postgres@v9
+        with:
+          username: shopwise
+          password: shopwise
+          database: shopwise
+          port: "25439"
+          postgres-version: "17"
+      - run: python -m unittest discover -s scripts -p test_dev.py -v
+      - run: python scripts/ci_smoke.py
+      - run: uv run --frozen pytest -q
+        working-directory: 商城 ShopWise/agent-service
+      - run: uv run --frozen python evaluate.py
+        working-directory: 商城 ShopWise/agent-service
+      - uses: actions/upload-artifact@v4
+        with:
+          name: development-db-${{ matrix.os }}
+          path: shopwise-ci.swdb
+          retention-days: 2
+          if-no-files-found: error
+
+  restore:
+    needs: services
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: windows-2025, source: macos-15}
+          - {os: macos-15, source: windows-2025}
+          - {os: macos-15-intel, source: windows-2025}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: ikalnytskyi/action-setup-postgres@v9
+        with:
+          username: shopwise
+          password: shopwise
+          database: shopwise
+          port: "25439"
+          postgres-version: "17"
+      - uses: actions/download-artifact@v4
+        with:
+          name: development-db-${{ matrix.source }}
+      - run: python scripts/dev.py import shopwise-ci.swdb --confirm-import
+      - name: Verify imported product rows and graph checkpoints schema
+        shell: bash
+        run: |
+          count=$(psql -h 127.0.0.1 -p 25439 -U shopwise -d shopwise -Atc 'select count(*) from products')
+          test "$count" -gt 0
+          psql -h 127.0.0.1 -p 25439 -U shopwise -d shopwise -v ON_ERROR_STOP=1 -c 'select count(*) from checkpoints'
