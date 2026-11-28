@@ -1,5 +1,8 @@
 """ShopWise Agent. Start with uv run python main.py."""
 import hmac
+import asyncio
+import logging
+from contextlib import suppress
 import re
 import time
 from contextlib import asynccontextmanager
@@ -7,6 +10,7 @@ from threading import Lock
 from typing import TypedDict
 
 import httpx
+import psycopg
 import uvicorn
 from fastapi import FastAPI, Header, HTTPException, Request
 from langgraph.checkpoint.postgres import PostgresSaver
@@ -69,20 +73,95 @@ async def lifespan(app):
         saver.setup()
         app.state.graph = graph_for(saver)
         app.state.discovery = discovery.graph_for(saver)
-        yield
+        app.state.pool=pool
+        task=asyncio.create_task(expire_discovery(pool,saver))
+        try:
+            yield
+        finally:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
 
 app = FastAPI(title="ShopWise Agent",lifespan=lifespan)
 locks = [Lock() for _ in range(128)]
+discovery_active=set()
+discovery_guard=Lock()
+
+def try_discovery_thread(thread):
+    with discovery_guard:
+        if thread in discovery_active:
+            return False
+        discovery_active.add(thread)
+        return True
+
+def release_discovery_thread(thread):
+    with discovery_guard:
+        discovery_active.remove(thread)
+LOG=logging.getLogger("uvicorn.error")
+
+def expire_threads(pool,saver):
+    with pool.connection(timeout=1) as conn:
+        rows=conn.execute("""
+            select thread_id from checkpoints where thread_id like 'discovery/%'
+            group by thread_id having max((checkpoint->>'ts')::timestamptz)<now()-interval '24 hours'
+            limit 100
+        """).fetchall()
+    for row in rows:
+        thread=row["thread_id"]
+        if not try_discovery_thread(thread):
+            continue
+        try:
+            with pool.connection(timeout=1) as conn:
+                fresh=conn.execute("""
+                    select 1 from checkpoints where thread_id=%s
+                    and (checkpoint->>'ts')::timestamptz>=now()-interval '24 hours' limit 1
+                """,(thread,)).fetchone()
+            if not fresh:
+                saver.delete_thread(thread)
+        finally:
+            release_discovery_thread(thread)
+
+async def expire_discovery(pool,saver):
+    while True:
+        try:
+            await asyncio.to_thread(expire_threads,pool,saver)
+        except Exception as failure:
+            LOG.warning("checkpoint retention failed type=%s",type(failure).__name__)
+        await asyncio.sleep(300)
 
 class SearchTurn(BaseModel):
     threadId: str = Field(min_length=1,max_length=64)
     message: str = Field(min_length=1,max_length=400)
 
 @app.post("/discovery/turn")
-def discovery_turn(turn: SearchTurn, request: Request, x_service_key: str = Header(default="")):
+def discovery_turn(turn: SearchTurn, request: Request, x_service_key: str = Header(default=""),
+                   x_request_id: str = Header(default="")):
     if not hmac.compare_digest(x_service_key.encode(),config.SERVICE_KEY.encode()):
         raise HTTPException(403,"需要服务身份")
-    return discovery.turn(request.app.state.discovery,turn.threadId,turn.message)
+    request_id=x_request_id if re.fullmatch(r"[0-9a-f-]{36}",x_request_id) else None
+    thread="discovery/"+turn.threadId
+    if not try_discovery_thread(thread):
+        raise HTTPException(409,"导购会话正在处理")
+    try:
+        response=discovery.turn(request.app.state.discovery,turn.threadId,turn.message,request_id)
+    finally:
+        release_discovery_thread(thread)
+    LOG.info("discovery requestId=%s model=%s routing=%s outcome=%s degradation=%s tokens=%s",
+             response["requestId"],config.MODEL,response["routing"],response["status"],response["degradation"],response["tokens"])
+    return response
+
+@app.get("/health/live")
+def live():
+    return {"status":"ok"}
+
+@app.get("/health/ready")
+def ready(request: Request):
+    try:
+        with request.app.state.pool.connection(timeout=.5) as conn:
+            conn.execute("select 1")
+    except (psycopg.Error, TimeoutError):
+        raise HTTPException(503,"检查点数据库暂不可用") from None
+    return {"status":"ok"}
 
 @app.get("/health")
 def health():

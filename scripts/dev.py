@@ -25,6 +25,8 @@ HOST = "127.0.0.1"
 WINDOWS = os.name == "nt"
 PORTS = {"db": ("SHOPWISE_DB_PORT", 15439), "api": ("PORT", 18081),
          "agent": ("AGENT_PORT", 18082), "web": ("SHOPWISE_WEB_PORT", 15173)}
+DEMO_PORTS = {"db": 26439, "api": 28083, "agent": 28084, "web": 25174}
+DEMO_PROJECT = "shopwise-demo"
 JAR = ROOT / "commerce-api/target/commerce-api-1.0.0.jar"
 INTERPRETER = ROOT / "agent-service/.venv" / ("Scripts/python.exe" if WINDOWS else "bin/python")
 VITE = ROOT / "web/node_modules/vite/bin/vite.js"
@@ -52,6 +54,9 @@ def read_env(path):
 
 def environment(args):
     env = {**read_env(ROOT / ".env.local"), **os.environ}
+    demo = args.action.startswith("demo")
+    if demo:
+        configure_demo(args, env)
     for name, (key, default) in PORTS.items():
         value = getattr(args, name + "_port")
         port = int(value if value is not None else env.get(key, default))
@@ -91,6 +96,43 @@ def environment(args):
     env.setdefault("AGENT_URL", f"http://{HOST}:{env['AGENT_PORT']}")
     env.setdefault("PYTHONUTF8", "1")
     return env
+
+
+def configure_demo(args, env):
+    prefixes = ("SHOPIFY_", "EBAY_", "DASHSCOPE_", "QWEN_", "SPRING_", "SERVER_", "SHOPWISE_SANDBOX_")
+    settings = {"DB_URL", "DB_USER", "DB_PASSWORD", "DATABASE_URL", "COMMERCE_URL",
+                "SHOPWISE_API_URL", "AGENT_URL", "SHOPWISE_ECB_RATES_FILE", "SHOPWISE_ENV",
+                "JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS", "JDK_JAVA_OPTIONS"}
+    for key in list(env):
+        if key.upper().startswith(prefixes) or key.upper() in settings:
+            del env[key]
+    for name, port in DEMO_PORTS.items():
+        env[PORTS[name][0]] = str(port)
+    env["COMPOSE_PROJECT_NAME"] = DEMO_PROJECT
+    env["SHOPWISE_DB_MODE"] = demo_database_mode(env) if args.action == "demo" and not args.db_mode else "compose"
+    env.update(
+        AGENT_MODE="offline", SHOPIFY_ENABLED="true", EBAY_ENABLED="false", SHOPWISE_DB_TESTS="false",
+        SERVICE_KEY=uuid.uuid4().hex, COMMERCE_HOSTS=HOST, BIND_ADDRESS=HOST, AGENT_HOST=HOST,
+        SHOPWISE_ECB_RATES_CACHE=str(ROOT / ".local/run" / (args.project or DEMO_PROJECT) / "ecb-rates.xml"),
+    )
+
+
+def demo_database_mode(env):
+    candidates = []
+    if WINDOWS and env.get("ProgramFiles"):
+        candidates.append(Path(env["ProgramFiles"]) / "PostgreSQL/17/bin")
+    elif sys.platform == "darwin":
+        candidates.extend(Path(prefix) / "opt/postgresql@17/bin" for prefix in ("/opt/homebrew", "/usr/local"))
+    if not env.get("SHOPWISE_PG_BIN"):
+        folder = next((p for p in candidates if (p / ("pg_ctl.exe" if WINDOWS else "pg_ctl")).is_file()), None)
+        if folder:
+            env["SHOPWISE_PG_BIN"] = str(folder)
+    try:
+        pg_tool("initdb", env)
+        pg_tool("pg_ctl", env)
+        return "native"
+    except ValueError:
+        return "compose"
 
 
 def binary(name, env):
@@ -154,7 +196,12 @@ def native_database(env):
             secret.write_text(env["DB_PASSWORD"] + "\n", encoding="utf-8")
             run([pg_tool("initdb", env), "-D", directory, "-U", env["DB_USER"], "--encoding=UTF8",
                  "--locale=C", "--auth=scram-sha-256", f"--pwfile={secret}"], env)
-    run([*control, "-l", directory / "postgresql.log", "-o", f"-h {HOST} -p {port}", "-w", "start"], env)
+    log = directory / "postgresql.log"
+    try:
+        run([*control, "-l", log, "-o", f"-h {HOST} -p {port}", "-w", "-t", "30", "start"],
+            env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=35)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as failure:
+        raise ValueError(f"原生 PostgreSQL 启动失败，请查看 {log}") from failure
 
 
 def npm_command(env):
@@ -314,16 +361,16 @@ def terminate(children):
 
 def services_for(env, runtime_jar):
     return [
-        ("commerce", [binary("java", env), "-jar", str(runtime_jar)], ROOT,
+        ("commerce", [binary("java", env), "-jar", runtime_jar.name], runtime_jar.parent,
          f"http://{HOST}:{env['PORT']}/api/health"),
         ("agent", [str(INTERPRETER), "main.py"], ROOT / "agent-service",
          f"http://{HOST}:{env['AGENT_PORT']}/health"),
-        ("web", [binary("node", env), str(VITE), "--host", HOST, "--port", env["SHOPWISE_WEB_PORT"],
+        ("web", [binary("node", env), str(VITE.relative_to(ROOT / "web")), "--host", HOST, "--port", env["SHOPWISE_WEB_PORT"],
                  "--strictPort"], ROOT / "web", f"http://{HOST}:{env['SHOPWISE_WEB_PORT']}"),
     ]
 
 
-def serve(env, local):
+def serve(env, local, *, rebuild=False):
     token = uuid.uuid4().hex
     stop_file = local / f"stop-{token}"
     state = {"token": token, "phase": "starting", "services": {}}
@@ -331,9 +378,9 @@ def serve(env, local):
     def check():
         if stop_file.exists():
             raise KeyboardInterrupt
-        for child in children:
-            if child.poll() is not None:
-                raise ValueError(f"服务意外退出，请查看 {local} 下的日志")
+        for name, child in children:
+            if (code := child.poll()) is not None:
+                raise ValueError(f"{name} 意外退出（{code}），请查看 {local / (name + '.log')}")
 
     def interrupt(*_):
         raise KeyboardInterrupt
@@ -350,6 +397,8 @@ def serve(env, local):
             init(env)
         else:
             database(env)
+            if rebuild:
+                run([MAVEN, "-q", "package", "-DskipTests"], env, ROOT / "commerce-api")
         runtime_jar = local / "commerce-runtime.jar"
         shutil.copy2(JAR, runtime_jar)
         services = services_for(env, runtime_jar)
@@ -361,7 +410,7 @@ def serve(env, local):
             with (local / f"{name}.log").open("ab") as log:
                 child = subprocess.Popen(argv, cwd=folder, env=env, stdout=log,
                                          stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, **group)
-            children.append(child)
+            children.append((name, child))
             for _ in range(240):
                 check()
                 try:
@@ -386,7 +435,7 @@ def serve(env, local):
     finally:
         state["phase"] = "stopping"
         write_state(local, state)
-        terminate(children)
+        terminate([child for _, child in children])
         stop_file.unlink(missing_ok=True)
         (local / "state.json").unlink(missing_ok=True)
         signal.signal(signal.SIGTERM, previous)
@@ -395,7 +444,8 @@ def serve(env, local):
 def parser():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument("action", nargs="?", default="start",
-                     choices=("doctor", "init", "start", "stop", "status", "seed", "reset", "export", "import"))
+                     choices=("doctor", "init", "start", "stop", "status", "seed", "reset", "export", "import",
+                              "demo", "demo-stop", "demo-status"))
     cli.add_argument("archive", nargs="?", type=Path, help="export/import 的 .swdb 归档路径")
     for name in PORTS:
         cli.add_argument("--" + name + "-port", type=int)
@@ -412,20 +462,20 @@ def main():
     local = ROOT / ".local/run" / env["COMPOSE_PROJECT_NAME"]
     if args.action == "doctor":
         return doctor(env)
-    if args.action == "status":
+    if args.action in ("status", "demo-status"):
         state = active_state(local)
         state.pop("token", None)
         print(json.dumps(state or {"phase": "stopped"}, ensure_ascii=False))
         return 0
-    if args.action == "stop":
+    if args.action in ("stop", "demo-stop"):
         stop(local)
         return 0
     with ownership(local / "owner.lock"):
         (local / "state.json").unlink(missing_ok=True)
         if args.action == "init":
             init(env)
-        elif args.action == "start":
-            serve(env, local)
+        elif args.action in ("start", "demo"):
+            serve(env, local, rebuild=args.action == "demo")
         elif args.action == "seed":
             database(env)
             run([MAVEN, "-q", "package", "-DskipTests"], env, ROOT / "commerce-api")

@@ -17,11 +17,12 @@ class ShopifyReconciliation {
     private final ObjectMapper json;
     private final String shop;
     private final ShopifyAdminToken token;
+    private final MerchantOrderProjection projection;
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
 
     ShopifyReconciliation(JdbcTemplate db,ObjectMapper json,@Value("${SHOPIFY_PILOT_SHOP:}") String shop,
-                          ShopifyAdminToken token) {
-        this.db=db; this.json=json; this.shop=shop; this.token=token;
+                          ShopifyAdminToken token,MerchantOrderProjection projection) {
+        this.db=db; this.json=json; this.shop=shop; this.token=token; this.projection=projection;
         if (token.enabled() && !shop.matches("[a-z0-9][a-z0-9-]*\\.myshopify\\.com"))
             throw new IllegalArgumentException("Reconciliation requires a verified pilot shop domain");
     }
@@ -61,12 +62,18 @@ class ShopifyReconciliation {
     private JsonNode page(String filter,String cursor) throws IOException,InterruptedException {
         String query="""
             query($query:String!,$cursor:String) {
-              orders(first:50,query:$query,after:$cursor,sortKey:UPDATED_AT) {
+              orders(first:5,query:$query,after:$cursor,sortKey:UPDATED_AT) {
                 pageInfo { hasNextPage endCursor }
                 nodes {
                   id name updatedAt cancelledAt displayFinancialStatus displayFulfillmentStatus
                   customer { id } currentTotalPriceSet { presentmentMoney { amount currencyCode } }
-                  fulfillments(first:20) { status trackingInfo { company number } }
+                  fulfillmentsCount { count }
+                  fulfillments(first:6) {
+                    status trackingInfo { company number }
+                    fulfillmentLineItems(first:10) { pageInfo { hasNextPage }
+                      nodes { quantity lineItem { id title } }
+                    }
+                  }
                 }
               }
             }
@@ -100,12 +107,24 @@ class ShopifyReconciliation {
             parcels.add(parcel);
         }
         snapshot.put("fulfillments",parcels);
-        db.update("""
-            insert into merchant_orders(shop,order_gid,customer_gid,source_updated,snapshot)
-            values (?,?,?,?,cast(? as jsonb)) on conflict(shop,order_gid) do update
-            set customer_gid=excluded.customer_gid,source_updated=excluded.source_updated,snapshot=merchant_orders.snapshot || excluded.snapshot
-            where merchant_orders.source_updated<=excluded.source_updated
-            """,shop,order.required("id").asString(),order.path("customer").path("id").asString(null),
+        var shipments=order.path("fulfillments");
+        boolean complete=order.path("fulfillmentsCount").path("count").asInt(-1)==shipments.size();
+        var shipped=new LinkedHashMap<String,Map<String,Object>>();
+        for(var fulfillment:shipments) {
+            if (!"SUCCESS".equalsIgnoreCase(fulfillment.path("status").asString(""))) continue;
+            var items=fulfillment.path("fulfillmentLineItems");
+            complete &= !items.path("pageInfo").path("hasNextPage").asBoolean(true);
+            for(var entry:items.path("nodes")) {
+                var line=entry.path("lineItem");
+                String id=line.path("id").asString("");
+                int quantity=entry.path("quantity").asInt(0);
+                if (!MerchantReturns.gid(id,"LineItem") || quantity<1) continue;
+                var existing=shipped.computeIfAbsent(id,k->new HashMap<>(Map.of("id",id,"title",line.path("title").asString("商品"),"quantity",0)));
+                existing.put("quantity",(Integer)existing.get("quantity")+quantity);
+            }
+        }
+        if (complete) snapshot.put("returnableLines",shipped.values());
+        projection.store(shop,order.required("id").asString(),order.path("customer").path("id").asString(null),
             OffsetDateTime.parse(order.required("updatedAt").asString()),json.writeValueAsString(snapshot));
     }
 }

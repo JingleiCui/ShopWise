@@ -20,6 +20,8 @@ class ShopifyOrderInboxTest {
     @Autowired JdbcTemplate db;
     @Autowired MerchantSupport support;
     @Autowired MerchantReturns returns;
+    @Autowired MerchantCheckout checkout;
+    @Autowired MerchantOrderProjection projection;
     private static final String SHOP="regression.myshopify.com";
     private static final String ORDER="gid://shopify/Order/28401";
 
@@ -107,6 +109,44 @@ class ShopifyOrderInboxTest {
         assertEquals(4,db.queryForObject("select count(*) from merchant_return_event where return_id=?",Integer.class,request.requestId()));
         assertEquals("REQUESTED",returns.open(()->buyer,alternate).get("status"));
         assertEquals("DECLINED",returns.decide(()->staff,alternate.requestId(),"decline",review).get("status"));
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    void matchingCheckoutRetriesDoNotReclaimAndChangedItemsAreRejected() {
+        String buyer="quote-"+java.util.UUID.randomUUID();
+        db.update("insert into users(username,password) values (?,'disabled-test-password')",buyer);
+        var id=java.util.UUID.randomUUID();
+        var lines=java.util.Map.of("gid://shopify/ProductVariant/7",1);
+        assertTrue(checkout.claim(id,buyer,lines));
+        assertFalse(checkout.claim(id,buyer,lines));
+        db.update("update merchant_checkout_request set status='UNKNOWN' where shop=? and buyer=? and id=?",SHOP,buyer,id);
+        assertFalse(checkout.claim(id,buyer,lines));
+        assertThrows(ResponseStatusException.class,()->checkout.claim(id,buyer,
+            java.util.Map.of("gid://shopify/ProductVariant/7",2)));
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    void mergesEqualTimestampFulfillmentEvidenceAndIgnoresOlderPayments() {
+        String order="gid://shopify/Order/30455", customer="gid://shopify/Customer/30455";
+        var updated=java.time.OffsetDateTime.parse("2026-11-16T00:00:00Z");
+        projection.store(SHOP,order,customer,updated,"""
+            {"financial_status":"paid"}
+            """);
+        projection.store(SHOP,order,customer,updated,"""
+            {"financial_status":"pending","returnableLines":[{"id":"gid://shopify/LineItem/19","quantity":2}]}
+            """);
+        projection.store(SHOP,order,customer,updated.minusMinutes(1),"""
+            {"financial_status":"pending","returnableLines":[]}
+            """);
+        var row=db.queryForMap("""
+            select snapshot->>'financial_status' as payment,
+                   snapshot->'returnableLines'->0->>'quantity' as quantity
+            from merchant_orders where shop=? and order_gid=?
+            """,SHOP,order);
+        assertEquals("paid",row.get("payment"));
+        assertEquals("2",row.get("quantity"));
     }
 
     @Test void verifiesDeduplicatesProjectsAndIgnoresOlderUpdates() throws Exception {

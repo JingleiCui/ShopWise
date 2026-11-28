@@ -15,3 +15,12 @@ test("China destination, exact source and fresh merchant link", async ({ page })
   await page.getByRole("button", { name: "查找商品" }).click();
   await expect(page.getByText(/收货地 杭州.*500/)).toBeVisible({ timeout: 40000 });
 });
+
+test("ready endpoint and direct search data boundary", async ({ request }) => {
+  const base = process.env.SHOPWISE_WEB_URL || "http://127.0.0.1:25173";
+  expect((await request.get(base + "/api/health/ready")).ok()).toBeTruthy();
+  const search = base + "/api/v1/discovery";
+  const privateQuery = await request.get(search, { params: { q: "desk lamp test@example.invalid" } });
+  expect(privateQuery.status()).toBe(400);
+  expect((await request.get(search, { params: { q: "036000291452" } })).ok()).toBeTruthy();
+});

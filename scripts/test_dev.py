@@ -1,6 +1,6 @@
 """Stdlib tests, including a real three-process lifecycle in a Unicode path."""
 from contextlib import contextmanager
-from io import BytesIO
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
@@ -34,6 +34,30 @@ class LauncherTests(unittest.TestCase):
             self.assertEqual(env["SHOPWISE_WEB_PORT"], "20010")
             self.assertEqual(env["SHOPWISE_DB_PORT"], "15439")
             self.assertEqual(env["COMMERCE_URL"], "http://127.0.0.1:20003")
+
+    def test_demo_is_anonymous_and_uses_its_own_addresses(self):
+        with temporary_root() as root, patch.dict(os.environ, {
+            "AGENT_MODE": "live", "DASHSCOPE_API_KEY": "example-secret", "EBAY_ENABLED": "true",
+            "SHOPIFY_CATALOG_CLIENT_ID": "example-client", "SPRING_PROFILES_ACTIVE": "prod",
+            "DATABASE_URL": "postgresql://elsewhere/production", "PORT": "38081",
+            "COMPOSE_PROJECT_NAME": "personal", "SHOPWISE_ECB_RATES_FILE": "old.xml",
+        }, clear=True):
+            args = dev.parser().parse_args(["demo", "--db-mode", "native", "--api-port", "29081"])
+            env = dev.environment(args)
+            self.assertEqual(env["AGENT_MODE"], "offline")
+            self.assertEqual(env["SHOPIFY_ENABLED"], "true")
+            self.assertEqual(env["EBAY_ENABLED"], "false")
+            for key in ("DASHSCOPE_API_KEY", "SHOPIFY_CATALOG_CLIENT_ID", "SPRING_PROFILES_ACTIVE",
+                        "SHOPWISE_ECB_RATES_FILE"):
+                self.assertNotIn(key, env)
+            self.assertEqual(env["COMPOSE_PROJECT_NAME"], "shopwise-demo")
+            self.assertEqual(env["SHOPWISE_WEB_PORT"], "25174")
+            self.assertEqual(env["COMMERCE_URL"], "http://127.0.0.1:29081")
+            self.assertEqual(env["DATABASE_URL"], "postgresql://shopwise:shopwise@127.0.0.1:26439/postgres")
+            self.assertEqual(Path(env["SHOPWISE_ECB_RATES_CACHE"]), root / ".local/run/shopwise-demo/ecb-rates.xml")
+            for command in ("demo-stop", "demo-status"):
+                control = dev.environment(dev.parser().parse_args([command]))
+                self.assertEqual(control["COMPOSE_PROJECT_NAME"], "shopwise-demo")
 
     def test_stale_state_cannot_stop_another_process(self):
         with temporary_root() as local:
@@ -83,12 +107,15 @@ class LauncherTests(unittest.TestCase):
             fixture = Path(__file__).resolve()
             with subprocess.Popen([sys.executable, str(fixture), "--fixture", str(local), *map(str, ports)]) as proc:
                 try:
-                    deadline = time.monotonic() + 20
+                    deadline = time.monotonic() + 30
                     while time.monotonic() < deadline and proc.poll() is None:
                         if dev.active_state(local).get("phase") == "ready":
                             break
                         time.sleep(.1)
-                    self.assertEqual(dev.active_state(local)["phase"], "ready")
+                    state = dev.active_state(local)
+                    if state.get("phase") != "ready":
+                        logs = "\n".join(f"{path.name}: {path.read_text(errors='replace')}" for path in local.glob("*.log"))
+                        self.fail(f"Fixture exit={proc.poll()} phase={state.get('phase')}\n{logs}")
                     dev.stop(local)
                     self.assertEqual(proc.wait(timeout=15), 0)
                 finally:
@@ -99,13 +126,15 @@ class LauncherTests(unittest.TestCase):
                     sock.settimeout(.3)
                     self.assertNotEqual(sock.connect_ex((dev.HOST, port)), 0)
             with socket.socket() as other:
-                other.bind((dev.HOST, ports[0]))
+                other.bind((dev.HOST, 0))
                 other.listen()
-                result = subprocess.run([sys.executable, str(fixture), "--fixture", str(local), *map(str, ports)],
+                occupied = other.getsockname()[1]
+                conflict_ports = [occupied, *ports[1:]]
+                result = subprocess.run([sys.executable, str(fixture), "--fixture", str(local), *map(str, conflict_ports)],
                                         stderr=subprocess.PIPE, timeout=15)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertFalse(dev.active_state(local))
-                with socket.create_connection((dev.HOST, ports[0]), timeout=2):
+                with socket.create_connection((dev.HOST, occupied), timeout=2):
                     pass
 
 
@@ -113,7 +142,7 @@ def fixture(folder, ports):
     local = Path(folder)
     env = dev.environment(dev.parser().parse_args(["--api-port", ports[0], "--agent-port", ports[1],
                                                   "--web-port", ports[2]]))
-    service = [(name, [sys.executable, "-m", "http.server", port, "--bind", dev.HOST], local,
+    service = [(name, [sys.executable, str(Path(__file__).resolve()), "--serve-health", port], local,
                 f"http://{dev.HOST}:{port}/") for name, port in zip(("commerce", "agent", "web"), ports)]
     dummy_jar = local / "fixture.jar"
     dummy_jar.touch()
@@ -122,8 +151,17 @@ def fixture(folder, ports):
         dev.serve(env, local)
 
 
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+
+
 if __name__ == "__main__":
-    if sys.argv[1:2] == ["--fixture"]:
+    if sys.argv[1:2] == ["--serve-health"]:
+        with ThreadingHTTPServer((dev.HOST, int(sys.argv[2])), HealthHandler) as server:
+            server.serve_forever()
+    elif sys.argv[1:2] == ["--fixture"]:
         fixture(sys.argv[2], sys.argv[3:])
     else:
         unittest.main()

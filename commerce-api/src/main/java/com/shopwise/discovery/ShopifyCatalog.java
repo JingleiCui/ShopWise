@@ -37,7 +37,10 @@ class ShopifyCatalog implements CatalogProvider {
         return call("search_catalog", Map.of("query",query,"context",CONTEXT,"filters",FILTERS,"pagination",Map.of("limit",5)));
     }
     public List<Offer> lookup(String id) throws Exception {
-        return call("lookup_catalog", Map.of("ids",List.of(id),"context",CONTEXT,"filters",FILTERS));
+        return lookupAll(List.of(id));
+    }
+    @Override public List<Offer> lookupAll(List<String> ids) throws Exception {
+        return call("lookup_catalog", Map.of("ids",ids,"context",CONTEXT,"filters",FILTERS));
     }
     public List<Offer> details(String id) throws Exception {
         return call("get_product", Map.of("id",id,"context",CONTEXT));

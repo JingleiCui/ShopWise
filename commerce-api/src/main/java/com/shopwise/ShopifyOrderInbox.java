@@ -26,11 +26,12 @@ class ShopifyOrderInbox {
     private final String secret;
     private final JdbcTemplate db;
     private final ObjectMapper json;
+    private final MerchantOrderProjection projection;
     private final ShopifyRefundReceipts refunds;
 
-    ShopifyOrderInbox(JdbcTemplate db,ObjectMapper json,ShopifyRefundReceipts refunds,@Value("${SHOPIFY_PILOT_SHOP:}") String shop,
+    ShopifyOrderInbox(JdbcTemplate db,ObjectMapper json,ShopifyRefundReceipts refunds,MerchantOrderProjection projection,@Value("${SHOPIFY_PILOT_SHOP:}") String shop,
                       @Value("${SHOPIFY_WEBHOOK_SECRET:}") String secret) {
-        this.db=db; this.json=json; this.refunds=refunds; this.shop=shop; this.secret=secret;
+        this.db=db; this.json=json; this.refunds=refunds; this.projection=projection; this.shop=shop; this.secret=secret;
         if ((!shop.isEmpty() || !secret.isEmpty()) &&
             (!shop.matches("[a-z0-9][a-z0-9-]*\\.myshopify\\.com") || secret.length()<24))
             throw new IllegalArgumentException("Configure a valid Shopify pilot shop and webhook secret");
@@ -100,12 +101,8 @@ class ShopifyOrderInbox {
               order by received_at,event_id limit 30 for update skip locked
             """,shop);
         for(var item:batch) {
-            db.update("""
-                insert into merchant_orders(shop,order_gid,customer_gid,source_updated,snapshot)
-                values (?,?,?,?,cast(? as jsonb)) on conflict(shop,order_gid) do update
-                set customer_gid=excluded.customer_gid,source_updated=excluded.source_updated,snapshot=merchant_orders.snapshot || excluded.snapshot
-                where merchant_orders.source_updated<excluded.source_updated
-                """,item.get("shop"),item.get("order_gid"),item.get("customer_gid"),item.get("source_updated"),item.get("snapshot"));
+            projection.store(shop,(String)item.get("order_gid"),(String)item.get("customer_gid"),
+                ((java.sql.Timestamp)item.get("source_updated")).toInstant().atOffset(java.time.ZoneOffset.UTC),(String)item.get("snapshot"));
             db.update("update shopify_inbox set processed_at=now() where shop=? and event_id=?",shop,item.get("event_id"));
         }
     }

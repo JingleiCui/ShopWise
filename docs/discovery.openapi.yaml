@@ -3,6 +3,15 @@ info:
   title: ShopWise discovery and merchant pilot
   version: 1.0.0
 paths:
+  /api/health/live:
+    get:
+      responses:
+        '200': {description: Java process is running}
+  /api/health/ready:
+    get:
+      responses:
+        '200': {description: Java process can query its business database}
+        '503': {description: Database is temporarily unavailable}
   /api/v1/discovery:
     get:
       parameters:
@@ -29,6 +38,25 @@ paths:
                         evidence: {enum: [GTIN, BRAND_MPN]}
                         offers: {type: array, items: {type: string}}
         '400': {description: Invalid query or budget}
+  /api/v1/discovery/shopify/compare:
+    get:
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema:
+            type: array
+            minItems: 2
+            maxItems: 4
+            uniqueItems: true
+            items: {type: string, maxLength: 220}
+      responses:
+        '200':
+          description: Current quotes for matching variants from one directory lookup
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Source'}
+        '400': {description: Invalid comparison references}
   /api/v1/discovery/{provider}/{operation}:
     get:
       parameters:
@@ -57,13 +85,18 @@ paths:
                 message: {type: string, minLength: 1, maxLength: 400}
       responses:
         '200':
-          description: Status and message events. The message carries text, filters and live offers. An upstream failure emits an error event.
+          description: Status and message events. The message carries text, filters, offers, requestId, status, degradation, routing, tokens, comparison, sources and shipping and tax evidence. An upstream failure emits an error event.
+          headers:
+            X-Request-Id:
+              schema: {type: string, format: uuid}
           content:
             text/event-stream:
               schema: {type: string}
+        '400': {description: Missing or invalid shopping request}
         '403': {description: Missing or invalid session-bound CSRF token}
         '409': {description: A turn is already active for the session}
         '429': {description: Search allowance exhausted}
+        '503': {description: Conversation lock unavailable}
   /api/v1/merchant/checkout:
     post:
       description: Bound pilot buyer previews a fresh hosted cart. No checkout URL is exposed yet.
@@ -91,7 +124,9 @@ paths:
       responses:
         '200': {description: Short-lived merchant quote with original currency and finalTotal false}
         '403': {description: Buyer identity or CSRF verification failed}
-        '409': {description: Variant availability or request changed}
+        '409': {description: Request differs from the claimed request or its result is pending or unknown}
+        '410': {description: Previous quote has expired}
+        '422': {description: Merchant rejected requested items}
         '503': {description: Merchant checkout disabled}
   /api/v1/merchant/checkout/{id}/confirm:
     post:
@@ -126,7 +161,7 @@ paths:
       responses:
         '200': {description: Created or replayed return request}
         '404': {description: Order is unavailable to this buyer}
-        '409': {description: Non-returnable order, insufficient quantity or reused request ID}
+        '409': {description: 'Non-returnable order, insufficient quantity or reused request ID'}
   /api/v1/merchant/staff/returns/{id}/{action}:
     post:
       parameters:
@@ -144,7 +179,7 @@ paths:
       responses:
         '200': {description: Updated or replayed status. Reconciliation only reads a successful existing Shopify refund.}
         '403': {description: Staff lacks shop access}
-        '409': {description: Invalid transition, missing proof of successful refund or already-used receipt}
+        '409': {description: 'Invalid transition, missing proof of successful refund or already-used receipt'}
 components:
   schemas:
     Source:

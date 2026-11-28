@@ -56,7 +56,7 @@ class SecurityConfig {
                 if (env.matchesProfiles("prod", "sandbox")) {
                   auth.requestMatchers("/api/products/**","/api/chat/**","/api/policies","/api/cart/**","/api/quotes/**","/api/orders/**","/api/returns/**","/api/staff/**").denyAll();
                 }
-                auth.requestMatchers("/api/login", "/api/health", "/error")
+                auth.requestMatchers("/api/login", "/api/health", "/api/health/live", "/api/health/ready", "/error")
                     .permitAll()
                     .requestMatchers(
                         HttpMethod.GET, "/api/products", "/api/products/*", "/api/policies")

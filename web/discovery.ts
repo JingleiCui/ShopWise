@@ -16,7 +16,7 @@ export function priceText(o: Offer) {
 }
 const statuses: Record<string,string> = { empty:"没有匹配商品", disabled:"未启用", busy:"请求繁忙", timeout:"查询超时", unavailable:"暂时无法连接" };
 export const useDiscovery = defineStore("discovery", {
-  state: () => ({ offers: [] as Offer[], matches: [] as Match[], selected: [] as string[], notice:"", busy:false, status:"", city:"", limit:"" }),
+  state: () => ({ degradation:"", requestId:"", offers: [] as Offer[], matches: [] as Match[], selected: [] as string[], notice:"", busy:false, status:"", city:"", limit:"" }),
   actions: {
     setOffers(offers: Offer[]) {
       const seen=new Map<string,Offer>();
@@ -29,6 +29,7 @@ export const useDiscovery = defineStore("discovery", {
       if (budget) params.set("budget",budget);
       const data=await api("/v1/discovery?"+params);
       const sources=data.sources as Source[];
+      this.degradation="";
       this.setOffers(sources.flatMap(s=>s.offers));
       this.matches=data.matches || [];
       this.notice=sources.filter(s=>s.status!=="ok").map(s=>s.provider+" · "+statuses[s.status]).join("　");
@@ -51,7 +52,9 @@ export const useDiscovery = defineStore("discovery", {
             if (event==="error") throw Error(data.message);
             if (event==="status") this.status=data.text;
             if (event==="message") {
-              this.setOffers(data.offers); this.matches=data.matches || []; this.notice=data.text; this.city=data.filters.city||"";
+              this.setOffers(data.offers); this.matches=data.matches || []; this.notice=data.text;
+              if (data.comparison) this.selected=this.offers.slice(0,4).map(keyOf);
+              this.requestId=data.requestId||""; this.degradation=data.degradation||""; this.city=data.filters.city||"";
               this.limit=data.filters.budget==null?"":String(data.filters.budget); completed=true;
             }
           }

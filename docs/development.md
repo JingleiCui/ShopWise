@@ -28,6 +28,16 @@ Windows x64 在 PowerShell 使用 `./shopwise.cmd`，macOS Intel 与 Apple Silic
 
 工具放在非标准安装路径时，可以在同一文件设置 `JAVA_HOME`、`SHOPWISE_UV`（uv 可执行文件）、`SHOPWISE_UV_PYTHON`（Python 3.12 可执行文件）和 `SHOPWISE_NPM_CLI`（用 Node 执行的 npm-cli.js）。本机绝对路径和数据库密码只保存在 `.env.local`。
 
+## 免费导购演示
+
+Windows 在 PowerShell 执行 `.\shopwise.cmd demo`，macOS 在终端执行 `./shopwise demo`。打开 <http://127.0.0.1:25174/>。使用相同入口执行 `demo-status` 或 `demo-stop`，也可以在启动终端按 Ctrl+C 停止应用。
+
+演示固定使用匿名 Shopify 目录和离线 Agent，采用独立的本地 PostgreSQL、项目名和端口。安装 PostgreSQL 17 原生工具即可自动启动数据库，或者使用 Docker Compose。首次运行会构建缺失的应用依赖。指定数据库方式可加 `--db-mode native` 或 `--db-mode compose`。演示不读取日常开发环境中的 Shopify、eBay 或模型凭据。
+
+输入“帮我找一盏能寄到杭州、到手不超过 300 元的阅读灯”，再输入“只看有货的”和“比较第 1 和第 2 款”。按页面编号选商品，用“前往商家前核价”刷新链接。目录按中国大陆筛选，杭州具体地址、运费及进口税费在商家页确认。
+
+应用启动后自动刷新 ECB 汇率，并把有效汇率写入 `.local/run/shopwise-demo/ecb-rates.xml`。网络异常时沿用五天内的缓存，包括重启后的缓存。超过有效期或缺少对应币种时，页面标记为预算待核对。[ECB 每日汇率 XML](https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml)
+
 ## 跨机转移开发数据
 
 在源、目标两边使用同一 Git 版本与 PostgreSQL 主版本。先停止正在运行的 ShopWise。以下命令使用 macOS 入口，Windows 将首项替换为 `./shopwise.cmd`。
@@ -41,4 +51,6 @@ Windows x64 在 PowerShell 使用 `./shopwise.cmd`，macOS Intel 与 Apple Silic
 
 ## 验证
 
-`python -m unittest discover -s scripts -p test_dev.py -v` 验证端口覆盖、中文路径、归档摘要、停止控制和外来进程隔离。GitHub Actions 的 Development environments 工作流在 Windows x64、macOS Intel 和 Apple Silicon 上分别构建服务、使用本机 PostgreSQL 执行 Java 数据库测试、验证启动/重启/停止、运行 Agent 离线评测，并将归档交给另一系统恢复。云端矩阵以实际运行结果为准。
+`python -m unittest discover -s scripts -p test_dev.py -v` 验证端口覆盖、中文路径、归档摘要、停止控制和外来进程隔离。GitHub Actions 的 Development environments 工作流在 Windows x64、macOS Intel 和 Apple Silicon 上分别构建服务、使用本机 PostgreSQL 执行 Java 数据库测试、验证启动/重启/停止、运行 Agent 离线评测，并将归档交给另一系统恢复。验收会在首轮导购写入真实 LangGraph 检查点，重启后复用同一浏览器会话更新预算，再验证归档能在另一系统恢复商品、检查点和 V15 表结构。云端失败时可下载服务日志定位进程。
+
+2026-11-27 在原生 Windows x64 和 Ubuntu 24.04（WSL2）上验证了中文空格路径、两轮启停、会话恢复和 PostgreSQL 17 双向归档导入。两个恢复目标都查到 60 条种子商品、V15 迁移和 8 条导购检查点。macOS Intel 与 Apple Silicon 的状态以 GitHub Actions 实际运行结果为准。

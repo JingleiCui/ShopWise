@@ -2,7 +2,14 @@
 
 截至 2026-11-27。协作中可以确认账号角色、店铺域名和审批状态。Client Secret、Admin Token、Webhook Secret 等敏感值请由账号所有者直接放入部署密钥管理器。
 
-先联调开发店或 eBay Sandbox 时，按 [沙箱联调指南](sandbox.md) 配置。本页的生产准入分开办理。
+## 个人项目的开通顺序
+
+1. **先使用 Shopify Global Catalog 验证导购**。没有合作商家也能查询全球目录、比较商品并打开商家链接。匿名模式可用于低频开发，先保留 `SHOPIFY_ENABLED=true`；目录凭据暂留空。公开使用时，在 [Shopify Dev Dashboard](https://dev.shopify.com/dashboard) 进入 **Catalogs → Create API key**，按提示完成身份验证，核对 `read_global_api_catalog_search`。配置 `SHOPIFY_CATALOG_CLIENT_ID`、`SHOPIFY_CATALOG_CLIENT_SECRET` 和自有的 HTTPS `SHOPIFY_AGENT_PROFILE`。官方文档提供免 Key 访问和认证限额，已认证客户端默认每秒 5 次，未公布按调用收费的价目。只做跨店导购无需订阅 Shopify 商店套餐。[Global Catalog](https://shopify.dev/docs/agents/catalog/global-catalog) · [认证和限额](https://shopify.dev/docs/agents/profiles/auth-and-rate-limiting)
+2. **需要验证真实模型时开通百炼**。进入 [华北 2（北京）API Key 页面](https://bailian.console.aliyun.com/cn-beijing/model/settings/api-key)，开通模型服务，由主账号或业务空间管理员创建 ShopWise 专用 Key，可将模型范围限制为 `qwen-plus`。配置 `DASHSCOPE_API_KEY`、`QWEN_MODEL=qwen-plus`、`QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1` 和 `AGENT_MODE=auto`。北京常用输入档（≤128k）非思考原价为输入 ¥0.80、输出 ¥2.00 每百万 token。若控制台提供免费额度，可开启“免费额度用完即停”。本地规则模式可用 `AGENT_MODE=offline`。[API Key](https://help.aliyun.com/zh/model-studio/get-api-key/) · [模型定价](https://help.aliyun.com/zh/model-studio/qwen-plus) · [费用控制](https://help.aliyun.com/zh/model-studio/bill-query-and-cost-management)
+3. **需要第二来源时开通 eBay Sandbox**。登录 [eBay Developers Program](https://developer.ebay.com/) 的 [Application Keys](https://developer.ebay.com/my/keys)，选择 **Sandbox → Create a keyset**，使用 App ID 与 Cert ID 配置 `EBAY_CLIENT_ID`、`EBAY_CLIENT_SECRET`、`EBAY_ENABLED=true`、`EBAY_SANDBOX=true`。开发者账号和沙箱免费。沙箱使用测试商品。正式 Browse API 按下文提交流量用途及资格审批，生产商业条件按 eBay 审批和协议确认。[开发者账号](https://www.developer.ebay.com/api-docs/creating-edp-account.html) · [沙箱说明](https://www.developer.ebay.com/api-docs/sandbox-environment.html) · [生产准入](https://developer.ebay.com/api-docs/buy/static/buy-requirements.html)
+4. **需要演示交易时，自建 Shopify 开发店**。在 Dev Dashboard 选择 **Stores → Create store → Dev**，可生成测试商品并走测试付款。开发店免费，无需已有合作商家。真实付款、订单查询和售后仍需你自己的正式商店或获得合作店授权，届时再按下方权限表开通。自建正式店另有套餐和可能的支付费用。[Shopify 开发店](https://shopify.dev/docs/apps/build/stores/development-stores) · [商店套餐](https://www.shopify.com/pricing)
+
+按 [沙箱联调指南](sandbox.md) 配置开发店或 eBay Sandbox。以下为正式权限细节。
 
 ## Shopify 跨店目录
 

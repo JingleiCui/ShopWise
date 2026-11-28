@@ -1,0 +1,119 @@
+name: Release checks
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: shopwise
+          POSTGRES_PASSWORD: shopwise
+          POSTGRES_DB: shopwise
+        ports: ["25439:5432"]
+        options: >-
+          --health-cmd "pg_isready -U shopwise -d shopwise"
+          --health-interval 5s --health-timeout 3s --health-retries 12
+    env:
+      SHOPWISE_DB_MODE: external
+      SHOPWISE_DB_PORT: "25439"
+      PORT: "28081"
+      AGENT_PORT: "28082"
+      SHOPWISE_WEB_PORT: "25173"
+      SHOPWISE_WEB_URL: http://127.0.0.1:25173
+      SHOPWISE_DB_TESTS: "true"
+      AGENT_MODE: offline
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: astral-sh/setup-uv@v6
+      - name: Build with locked dependencies and run Java database tests
+        run: python scripts/dev.py init
+      - name: Agent unit tests and offline acceptance matrix
+        working-directory: agent-service
+        run: |
+          uv run --frozen pytest -q
+          uv run --frozen python evaluate.py
+          uv run --frozen python evaluate_discovery.py --report ../.local/discovery-evaluation.json
+      - name: Validate OpenAPI
+        run: uvx --from openapi-spec-validator==0.7.2 openapi-spec-validator docs/discovery.openapi.yaml
+      - name: Install browser and audit frontend dependencies
+        working-directory: web
+        run: |
+          npm audit --audit-level=moderate
+          npx playwright install --with-deps chromium
+      - name: Run browser tests and load gate against two deterministic catalog providers
+        shell: bash
+        run: |
+          SPRING_PROFILES_ACTIVE=load-fixture SHOPWISE_LOAD_BOTH=true python scripts/dev.py start --project ci-release &
+          supervisor=$!
+          trap 'python scripts/dev.py stop --project ci-release || true; wait "$supervisor" || true' EXIT
+          ready=0
+          for attempt in {1..120}; do
+            if curl -fsS http://127.0.0.1:28081/api/health/ready &&
+               curl -fsS http://127.0.0.1:28082/health/ready &&
+               curl -fsS "$SHOPWISE_WEB_URL" -o /dev/null; then ready=1; break; fi
+            kill -0 "$supervisor" || exit 1
+            sleep 1
+          done
+          test "$ready" = 1
+          (cd web && npx playwright test --workers=1)
+          python scripts/load_discovery.py --both --report .local/discovery-load.json
+      - name: Build Java and Agent production images
+        run: |
+          docker build -t shopwise-java:ci commerce-api
+          docker build -t shopwise-agent:ci agent-service
+      - name: Scan source and lockfiles
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: "."
+          skip-dirs: .git,.local,web/node_modules,agent-service/.venv,commerce-api/target
+          scanners: vuln,secret
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+      - name: Scan Java runtime image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: shopwise-java:ci
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+      - name: Scan Agent runtime image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: shopwise-agent:ci
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-validation
+          include-hidden-files: true
+          path: |
+            .local/discovery-evaluation.json
+            .local/discovery-load.json
+            .local/run/ci-release/*.log
+            commerce-api/target/surefire-reports/*.xml
+            web/test-results/.last-run.json
+          if-no-files-found: ignore
+          retention-days: 7

@@ -5,6 +5,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import jakarta.annotation.PreDestroy;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,10 @@ class DiscoveryController {
     private final Map<String,CatalogProvider> providers=new LinkedHashMap<>();
     private final Map<String,Gate> gates=new HashMap<>();
     private final ScheduledExecutorService pool=Executors.newScheduledThreadPool(8);
+
+    private static final Pattern PRIVATE_QUERY=Pattern.compile(
+        "[\\w.+-]+@[\\w.-]+\\.[a-z]{2,}|https?://|(?:\\d[\\s+-]*){7,}|手机号|身份证|详细地址|门牌|(?:路|街道|巷)\\s*\\d+\\s*号",
+        Pattern.CASE_INSENSITIVE);
 
     private final ReferenceRates rates;
     DiscoveryController(List<CatalogProvider> sources,ReferenceRates rates) {
@@ -54,6 +59,8 @@ class DiscoveryController {
         String query=q.strip();
         if (query.isEmpty() || query.length()>120 || budget!=null && (budget.signum()<0 || budget.compareTo(BigDecimal.valueOf(1e8))>0))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"请核对关键词和预算");
+        if (PRIVATE_QUERY.matcher(query).find() && ProductMatch.gtin(query)==null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"请输入商品名称、型号或条码");
         var tasks=new ArrayList<CompletableFuture<Source>>();
         for (var p : providers.values()) tasks.add(submit(p,()->{
             var offers=p.search(query);
@@ -66,6 +73,17 @@ class DiscoveryController {
         var sources=tasks.stream().map(CompletableFuture::join).toList();
         return new Batch("CN","UNKNOWN","UNKNOWN",sources,ProductMatch.crossPlatform(
             sources.stream().flatMap(s->s.offers().stream()).toList()));
+    }
+
+    @GetMapping("/shopify/compare")
+    Source compareShopify(@RequestParam("id") List<String> ids, HttpServletResponse response) {
+        response.setHeader("Cache-Control","no-store");
+        var provider=providers.get("shopify");
+        if (provider==null || ids.size()<2 || ids.size()>4 || Set.copyOf(ids).size()!=ids.size()
+            || ids.stream().anyMatch(id->id.isBlank() || id.length()>220))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"请选择 2 至 4 个不同的商品规格");
+        return submit(provider,()->provider.lookupAll(ids).stream()
+            .filter(o->ids.contains(o.variantId())).map(o->o.withReference(rates.cny(o))).toList()).join();
     }
 
     @GetMapping("/{provider}/{operation:lookup|details}")

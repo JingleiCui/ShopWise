@@ -90,6 +90,9 @@ async function writeHeaders(): Promise<Record<string,string>> {
   const csrf=await res.json();
   return { [csrf.header]: csrf.token, "Content-Type":"application/json" };
 }
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) { super(message); }
+}
 export async function api(path: string, method = "GET", body?: unknown) {
   const r = await fetch("/api" + path, {
     method,
@@ -98,7 +101,7 @@ export async function api(path: string, method = "GET", body?: unknown) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const data = await r.json().catch(() => null);
-  if (!r.ok) throw Error(data?.message || "请求失败（" + r.status + "）");
+  if (!r.ok) throw new ApiError(data?.message || "请求失败（" + r.status + "）", r.status);
   return data;
 }
 export const catalog = async () => {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { api } from "./store";
+import { api, ApiError } from "./store";
 import MerchantReturns from "./MerchantReturns.vue";
 interface Product {id:string;product:string;variant:string;amount:string;currency:string}
 interface Quote {id:string;cost:{totalAmount:{amount:string;currencyCode:string}}}
@@ -44,16 +44,36 @@ async function login() {
 async function bind() {
   const result=await api("/v1/merchant/binding/start","POST",{}); location.assign(result.authorizationUrl);
 }
+let pendingQuote: { id:string; payload:string } | undefined;
 async function preview() {
   quote.value=undefined;
   const items=products.value.flatMap(p => quantities.value[p.id]>0?[{variantId:p.id,quantity:quantities.value[p.id]}]:[]);
   if (!items.length) throw Error("请选择需要购买的商品");
-  quote.value=await api("/v1/merchant/checkout","POST",{requestId:crypto.randomUUID(),items});
+  const payload=JSON.stringify(items);
+  if (pendingQuote?.payload!==payload) pendingQuote={id:crypto.randomUUID(),payload};
+  try {
+    quote.value=await api("/v1/merchant/checkout","POST",{requestId:pendingQuote.id,items});
+  } catch (failure) {
+    if (failure instanceof ApiError && [410, 422].includes(failure.status)) {
+      pendingQuote=undefined;
+      throw Error(failure.status===410 ? "报价已过期，请重新核价" : "商家暂无法按此规格备货，请核对商品或数量");
+    }
+    throw failure;
+  }
 }
 async function checkout() {
   if (!quote.value) return;
-  const {checkoutUrl}=await api("/v1/merchant/checkout/"+quote.value.id+"/confirm","POST",{});
-  location.assign(checkoutUrl);
+  try {
+    const {checkoutUrl}=await api("/v1/merchant/checkout/"+quote.value.id+"/confirm","POST",{});
+    location.assign(checkoutUrl);
+  } catch (failure) {
+    if (failure instanceof ApiError && failure.status===409) {
+      quote.value=undefined;
+      pendingQuote=undefined;
+      throw Error("报价已变动或过期，请重新核价");
+    }
+    throw failure;
+  }
 }
 async function ask(order:Order) {
   await api("/v1/merchant/support","POST",{requestId:crypto.randomUUID(),orderId:order.id,reason:reasons.value[order.id]});

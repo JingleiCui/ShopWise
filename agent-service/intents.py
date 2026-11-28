@@ -45,15 +45,15 @@ def offline(message):
         keyword=next((x for x in WORDS if x.lower() in lower), None),
         use=next((x for x in USES if x in message), None),
         spec=next((x for x in SPECS if x in message), None),
-        budget=float(budget.group(1) or budget.group(2)) if budget else None, inStock=stock)
+        budget=min(1e8, float(budget.group(1) or budget.group(2))) if budget else None, inStock=stock)
 
-def choose(message, filters, metrics):
+def choose(message, filters, metrics, *, timeout=18):
     if config.MODE == "offline" or (config.MODE == "auto" and not config.API_KEY):
         metrics["mode"] = "offline"
         return offline(message)
     metrics["mode"] = "live"
     client = ChatOpenAI(model=config.MODEL, api_key=config.API_KEY, base_url=config.MODEL_URL,
-                        temperature=0, timeout=18, max_retries=0)
+                        temperature=0, timeout=timeout, max_retries=0)
     result = client.bind_tools([Intent], tool_choice="Intent").invoke([
         ("system", "你是商店意图路由器。调用 Intent 一次，参数只含本轮明确条件。关键词是商品类型，用途/规格分开。售后咨询用 policy，明确要求提交退货才用 return。站内默认，明确外部请求才用 external。"),
         ("user", json.dumps({"历史筛选":filters, "本轮":message}, ensure_ascii=False))])

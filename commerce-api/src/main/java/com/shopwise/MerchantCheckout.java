@@ -85,20 +85,57 @@ class MerchantCheckout {
             if (!expected.equals(quote.path("requested"))) throw new ResponseStatusException(HttpStatus.CONFLICT,"此请求已用于其他商品");
             return quote;
         }
-        var result=call("mutation($input:CartInput!){cartCreate(input:$input){cart{"+FIELDS+"} userErrors{code}}}",variables).path("cartCreate");
-        if (!result.path("userErrors").isEmpty()) throw new ResponseStatusException(HttpStatus.CONFLICT,"商家暂时无法按所选规格备货");
-        var cart=result.path("cart");
-        var quote=quote(input.requestId(),cart,lines);
-        db.update("""
-          insert into merchant_checkout(id,shop,buyer,cart_id,quote,expires_at)
-          values (?,?,?,?,cast(? as jsonb),now()+interval '5 minutes')
-          on conflict(id) do nothing
-          """,input.requestId(),shop,buyer,encrypt(cart.required("id").asString()),json.writeValueAsString(quote));
-        var winner=saved(input.requestId(),buyer,String.class,"quote::text");
-        if (winner.isEmpty()) throw new ResponseStatusException(HttpStatus.CONFLICT,"报价已失效，请重新核价");
-        JsonNode existing=json.readTree(winner.get(0));
-        if (!json.valueToTree(lines).equals(existing.path("requested"))) throw new ResponseStatusException(HttpStatus.CONFLICT,"此请求已用于其他商品");
-        return existing;
+        if (!claim(input.requestId(),buyer,lines)) {
+            String status=db.queryForObject("select status from merchant_checkout_request where shop=? and buyer=? and id=?",
+                String.class,shop,buyer,input.requestId());
+            var completed=saved(input.requestId(),buyer,String.class,"quote::text");
+            if (!completed.isEmpty()) return json.readTree(completed.get(0));
+            if ("READY".equals(status)) throw new ResponseStatusException(HttpStatus.GONE,"报价已失效，请重新核价");
+            if ("REJECTED".equals(status))
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,"商家暂时无法按所选规格备货");
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"报价仍在处理或结果待核实，请勿重复提交");
+        }
+        try {
+            var result=call("mutation($input:CartInput!){cartCreate(input:$input){cart{"+FIELDS+"} userErrors{code}}}",variables).path("cartCreate");
+            if (!result.path("userErrors").isEmpty()) {
+                mark(input.requestId(),buyer,"REJECTED");
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,"商家暂时无法按所选规格备货");
+            }
+            var cart=result.path("cart");
+            var quote=quote(input.requestId(),cart,lines);
+            db.update("""
+              insert into merchant_checkout(id,shop,buyer,cart_id,quote,expires_at)
+              values (?,?,?,?,cast(? as jsonb),now()+interval '5 minutes')
+              on conflict(id) do nothing
+              """,input.requestId(),shop,buyer,encrypt(cart.required("id").asString()),json.writeValueAsString(quote));
+            var winner=saved(input.requestId(),buyer,String.class,"quote::text");
+            if (winner.isEmpty()) throw new ResponseStatusException(HttpStatus.CONFLICT,"报价已失效，请重新核价");
+            JsonNode existing=json.readTree(winner.get(0));
+            if (!json.valueToTree(lines).equals(existing.path("requested"))) throw new ResponseStatusException(HttpStatus.CONFLICT,"此请求已用于其他商品");
+            mark(input.requestId(),buyer,"READY");
+            return existing;
+        } catch(IOException | InterruptedException | RuntimeException failure) {
+            db.update("update merchant_checkout_request set status='UNKNOWN' where shop=? and buyer=? and id=? and status='PENDING'",
+                shop,buyer,input.requestId());
+            if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
+            throw failure;
+        }
+    }
+
+    boolean claim(UUID id,String buyer,Map<String,Integer> lines) {
+        int inserted=db.update("""
+            insert into merchant_checkout_request(shop,buyer,id,requested,status)
+            values (?,?,?,cast(? as jsonb),'PENDING') on conflict do nothing
+            """,shop,buyer,id,json.writeValueAsString(lines));
+        if (inserted==1) return true;
+        var request=db.queryForMap("select requested::text,status from merchant_checkout_request where shop=? and buyer=? and id=?",shop,buyer,id);
+        if (!json.valueToTree(lines).equals(json.readTree((String)request.get("requested"))))
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"此请求已用于其他商品");
+        return false;
+    }
+
+    private void mark(UUID id,String buyer,String status) {
+        db.update("update merchant_checkout_request set status=? where shop=? and buyer=? and id=?",status,shop,buyer,id);
     }
 
     @PostMapping("/checkout/{id}/confirm")
@@ -171,5 +208,9 @@ class MerchantCheckout {
     }
 
     @Scheduled(fixedDelay=3600000)
-    void expire() { db.update("delete from merchant_checkout where expires_at<now()-interval '1 day'"); }
+    void expire() {
+        db.update("update merchant_checkout_request set status='UNKNOWN' where status='PENDING' and created_at<now()-interval '30 seconds'");
+        db.update("delete from merchant_checkout where expires_at<now()-interval '1 day'");
+        db.update("delete from merchant_checkout_request where created_at<now()-interval '7 days'");
+    }
 }

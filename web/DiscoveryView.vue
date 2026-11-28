@@ -9,6 +9,11 @@ const sameProducts=computed(()=>shop.matches.map(group=>({
   evidence: group.evidence,
   offers: group.offers.flatMap(key=>shop.offers.filter(o=>keyOf(o)===key)),
 })).filter(group=>new Set(group.offers.map(o=>o.provider)).size>1));
+function budgetEvidence(offer:Offer) {
+  const amount=offer.currency==="CNY" ? offer.price : offer.referenceCny?.amount;
+  if (amount == null) return "无法换算人民币商品价，预算待核对";
+  return amount>Number(shop.limit) ? "商品价已高于预算" : "商品价在预算内，到手价待确认";
+}
 let timer:ReturnType<typeof setInterval>;
 onMounted(()=>{ timer=setInterval(()=>{shop.setOffers(shop.offers); if(checked.value&&!fresh(checked.value)) checked.value=null;},1000); });
 onBeforeUnmount(()=>{clearInterval(timer); shop.$reset();});
@@ -45,12 +50,14 @@ async function check(o:Offer) {
   <section v-if="shop.notice || shop.offers.length"><h2>查询结果</h2>
     <p v-if="shop.city || shop.limit">{{ shop.city ? '收货地 '+shop.city : '中国大陆收货' }} {{ shop.limit ? ' · 预算 ¥'+shop.limit : '' }}</p>
     <p role="status">{{ shop.notice }}</p>
-    <article v-for="o in shop.offers" :key="keyOf(o)" class="offer">
-      <div><small>{{ o.provider }} · {{ o.source }}</small><h3>{{ o.title }}</h3><p>{{ o.variant }}</p>
+    <p v-if="shop.degradation?.startsWith('model_')">当前使用基础筛选，可直接修改关键词或预算。</p>
+    <article v-for="(o,index) in shop.offers" :key="keyOf(o)" class="offer">
+      <div><small>{{ o.provider }} · {{ o.source }}</small><h3>{{ index + 1 }}. {{ o.title }}</h3><p>{{ o.variant }}</p>
       <small>查询于 {{ new Date(o.observedAt).toLocaleTimeString('zh-CN') }} · {{ o.available===true?'来源显示有货':'库存待核实' }}</small></div>
       <div><strong>{{ priceText(o) }}</strong>
       <p v-if="o.referenceCny"><small>约 ¥{{ o.referenceCny.amount.toFixed(2) }} · ECB {{o.referenceCny.date}}</small></p>
       <p>商品价 · 税费和运费待确认</p>
+      <p v-if="shop.limit"><small>{{ budgetEvidence(o) }}</small></p>
       <button @click="shop.toggle(o)" :aria-pressed="shop.selected.includes(keyOf(o))" :disabled="!shop.selected.includes(keyOf(o)) && selected.length>=4">{{shop.selected.includes(keyOf(o))?'移出比较':'加入比较'}}</button>
       <button :disabled="shop.busy" @click="check(o)">前往商家前核价</button></div></article>
   </section>
@@ -62,7 +69,15 @@ async function check(o:Offer) {
   </section>
   <section v-if="selected.length>=2"><h2>规格与报价对比</h2>
     <div class="scroll"><table><thead><tr><th>比较项</th><th v-for="o in selected" :key="keyOf(o)">{{o.title}}</th></tr></thead>
-    <tbody><tr v-for="field in ['商家','规格','商品价','到手价']" :key="field"><th>{{field}}</th><td v-for="o in selected" :key="keyOf(o)">{{field==='商家'?o.source:field==='规格'?(o.variant||'待确认'):field==='商品价'?priceText(o):'运费与税费待确认'}}</td></tr></tbody></table></div>
+    <tbody><tr v-for="field in ['商家','规格','商品价','到手价']" :key="field">
+      <th>{{ field }}</th>
+      <td v-for="o in selected" :key="keyOf(o)">
+        {{ field==='商家' ? o.source : field==='规格' ? (o.variant||'待确认') : field==='商品价' ? priceText(o) : '运费与税费待确认' }}
+        <template v-if="field==='商品价' && o.referenceCny">
+          <br/><small>约 ¥{{ o.referenceCny.amount.toFixed(2) }} · ECB {{ o.referenceCny.date }}</small>
+        </template>
+      </td>
+    </tr></tbody></table></div>
   </section>
   <section v-if="checked" class="handoff" aria-live="polite"><h2>商家最新报价</h2><strong>{{ checked.title }} · {{ priceText(checked) }}</strong>
     <p>{{checked.variant}} · 请在商家页面确认具体地址、运费和税费。</p>
