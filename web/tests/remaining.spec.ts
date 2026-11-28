@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.use({launchOptions:process.env.SHOPWISE_CHROME?{executablePath:process.env.SHOPWISE_CHROME}:{}});
-const base=process.env.SHOPWISE_WEB_URL||"http://127.0.0.1:25173";
+const base=process.env.SHOPWISE_WEB_URL||"http://127.0.0.1:20173";
 
 test("verified cross-platform offers appear together",async({page})=>{
   const make=(provider:string)=>({provider,productId:"desk-light",variantId:provider+"-black",title:"Desk Light",

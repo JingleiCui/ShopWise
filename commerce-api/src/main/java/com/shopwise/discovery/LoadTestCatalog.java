@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 /** Deterministic upstream latency and records for loopback-only release checks. */
 @Component
-@Profile("load-fixture & !prod")
+@Profile("load-fixture & !acceptance & !prod")
 class LoadTestCatalog implements CatalogProvider {
     public String name() { return "shopify"; }
     public boolean enabled() { return true; }
@@ -22,7 +22,7 @@ class LoadTestCatalog implements CatalogProvider {
 }
 
 @Component
-@Profile("load-fixture & !prod")
+@Profile("load-fixture & !acceptance & !prod")
 @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name="shopwise.load.both",havingValue="true")
 class LoadTestSecondCatalog extends LoadTestCatalog {
     @Override public String name() { return "ebay"; }

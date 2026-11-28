@@ -129,7 +129,7 @@ def ebay_sandbox(env, query):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--port", type=int, default=15173)
+    parser.add_argument("--port", type=int, default=20173)
     parser.add_argument("--query", default="desk lamp")
     parser.add_argument("--ebay-query", help="Use a separate known listing term for eBay Sandbox")
     args = parser.parse_args()

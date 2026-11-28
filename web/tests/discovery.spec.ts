@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.use({ launchOptions: process.env.SHOPWISE_CHROME ? { executablePath: process.env.SHOPWISE_CHROME } : {} });
 test("China destination, exact source and fresh merchant link", async ({ page }) => {
-  const base = process.env.SHOPWISE_WEB_URL || "http://127.0.0.1:25173";
+  const base = process.env.SHOPWISE_WEB_URL || "http://127.0.0.1:20173";
   await page.goto(base);
   await page.getByLabel("购物需求").fill("帮我找一盏能寄到杭州、到手不超过 300 元的阅读灯");
   await page.getByRole("button", { name: "查找商品" }).click();
@@ -17,7 +17,7 @@ test("China destination, exact source and fresh merchant link", async ({ page })
 });
 
 test("ready endpoint and direct search data boundary", async ({ request }) => {
-  const base = process.env.SHOPWISE_WEB_URL || "http://127.0.0.1:25173";
+  const base = process.env.SHOPWISE_WEB_URL || "http://127.0.0.1:20173";
   expect((await request.get(base + "/api/health/ready")).ok()).toBeTruthy();
   const search = base + "/api/v1/discovery";
   const privateQuery = await request.get(search, { params: { q: "desk lamp test@example.invalid" } });

@@ -15,16 +15,17 @@ import tempfile
 import time
 import uuid
 import urllib.request
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 from dev_data import transfer
+from port_registry import check_reservations, listener, windows_exclusions
 
 
 ROOT = Path(__file__).resolve().parents[1]
 HOST = "127.0.0.1"
 WINDOWS = os.name == "nt"
-PORTS = {"db": ("SHOPWISE_DB_PORT", 15439), "api": ("PORT", 18081),
-         "agent": ("AGENT_PORT", 18082), "web": ("SHOPWISE_WEB_PORT", 15173)}
+PORTS = {"db": ("SHOPWISE_DB_PORT", 15439), "api": ("PORT", 20174),
+         "agent": ("AGENT_PORT", 18082), "web": ("SHOPWISE_WEB_PORT", 20173)}
 DEMO_PORTS = {"db": 26439, "api": 28083, "agent": 28084, "web": 25174}
 DEMO_PROJECT = "shopwise-demo"
 JAR = ROOT / "commerce-api/target/commerce-api-1.0.0.jar"
@@ -388,11 +389,14 @@ def serve(env, local, *, rebuild=False):
     previous = signal.signal(signal.SIGTERM, interrupt)
     write_state(local, state)
     try:
-        for key in ("PORT", "AGENT_PORT", "SHOPWISE_WEB_PORT"):
+        for name, key in (("Java API", "PORT"), ("Agent", "AGENT_PORT"), ("Web", "SHOPWISE_WEB_PORT")):
             with socket.socket() as sock:
                 sock.settimeout(.3)
                 if sock.connect_ex((HOST, int(env[key]))) == 0:
-                    raise ValueError(f"端口 {env[key]} 已被占用，请修改端口或检查 status")
+                    raise ValueError(
+                        f"ShopWise {name} 的固定端口 {env[key]} 已被占用。"
+                        "请先运行 status 检查本项目实例，再确认当前监听进程。"
+                    )
         if not all(path.exists() for path in (JAR, INTERPRETER, VITE)):
             init(env)
         else:
@@ -441,11 +445,46 @@ def serve(env, local, *, rebuild=False):
         signal.signal(signal.SIGTERM, previous)
 
 
+def occupied_apps(env):
+    listeners = {}
+    for name in ("api", "agent", "web"):
+        active = listener(int(env[PORTS[name][0]]))
+        if active:
+            listeners[name] = active
+    return listeners
+
+
+def validate_ports(args, env):
+    prefix = "demo-" if args.action == "demo" else ""
+    resolved = {prefix + name: int(env[key]) for name, (key, _) in PORTS.items()}
+    expected = None
+    if env["COMPOSE_PROJECT_NAME"] == "shopwise":
+        expected = {name: port for name, (_, port) in PORTS.items()}
+    elif env["COMPOSE_PROJECT_NAME"] == DEMO_PROJECT:
+        expected = {"demo-" + name: port for name, port in DEMO_PORTS.items()}
+    if expected is not None and resolved.keys() != expected.keys():
+        raise ValueError("日常开发和免费演示必须使用各自的 Compose 项目名")
+    check_reservations(resolved, "ShopWise", expected)
+    targets = {
+        "COMMERCE_URL": "api", "SHOPWISE_API_URL": "api", "AGENT_URL": "agent",
+        "DB_URL": "db", "DATABASE_URL": "db",
+    }
+    for key, service in targets.items():
+        endpoint = urlsplit(env[key].removeprefix("jdbc:"))
+        port = resolved[prefix + service]
+        if endpoint.hostname in (HOST, "localhost", "::1") and endpoint.port != port:
+            raise ValueError(f"{key} 的本机端口与 ShopWise/{service} 不一致，应使用 {port}")
+    for start, end in windows_exclusions():
+        for service, port in resolved.items():
+            if start <= port <= end:
+                raise ValueError(f"Windows 保留端口 {port} 与 ShopWise/{service} 冲突，需统一评估两端配置")
+
+
 def parser():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument("action", nargs="?", default="start",
                      choices=("doctor", "init", "start", "stop", "status", "seed", "reset", "export", "import",
-                              "demo", "demo-stop", "demo-status"))
+                              "demo", "demo-stop", "demo-status", "accept"))
     cli.add_argument("archive", nargs="?", type=Path, help="export/import 的 .swdb 归档路径")
     for name in PORTS:
         cli.add_argument("--" + name + "-port", type=int)
@@ -457,7 +496,13 @@ def parser():
 
 
 def main():
+    if sys.argv[1:] == ["ports", "check"]:
+        from port_registry import check
+        return check()
     args = parser().parse_args()
+    if args.action == "accept":
+        from acceptance import accept
+        return accept(args)
     env = environment(args)
     local = ROOT / ".local/run" / env["COMPOSE_PROJECT_NAME"]
     if args.action == "doctor":
@@ -465,35 +510,57 @@ def main():
     if args.action in ("status", "demo-status"):
         state = active_state(local)
         state.pop("token", None)
-        print(json.dumps(state or {"phase": "stopped"}, ensure_ascii=False))
+        if not state:
+            listeners = occupied_apps(env)
+            state = {"phase": "occupied", "listeners": listeners} if listeners else {"phase": "stopped"}
+        print(json.dumps(state, ensure_ascii=False))
         return 0
     if args.action in ("stop", "demo-stop"):
+        if not active_state(local) and occupied_apps(env):
+            raise ValueError("固定端口有监听，但没有可确认的 ShopWise 实例。请运行 status 查看占用。")
         stop(local)
         return 0
-    with ownership(local / "owner.lock"):
-        (local / "state.json").unlink(missing_ok=True)
-        if args.action == "init":
-            init(env)
-        elif args.action in ("start", "demo"):
-            serve(env, local, rebuild=args.action == "demo")
-        elif args.action == "seed":
-            database(env)
-            run([MAVEN, "-q", "package", "-DskipTests"], env, ROOT / "commerce-api")
-            run([binary("java", env), "-jar", JAR, "--shopwise.seed-only=true", "--server.port=0"], env)
-        elif args.action == "reset":
-            if not args.confirm_reset or env["SHOPWISE_DB_MODE"] != "compose":
-                raise ValueError("仅 Compose 开发库支持 reset，请先停止服务并提供 --confirm-reset")
-            run(compose(env, "down", "--volumes"), env)
-            database(env)
-            print("数据库已重置。下次启动会重新导入本地商品。")
+    if args.action in ("start", "demo", "init", "seed"):
+        validate_ports(args, env)
+    try:
+        with ownership(local / "owner.lock"):
+            run_owned(args, env, local)
+    except Busy:
+        if args.action not in ("start", "demo"):
+            raise
+        state = active_state(local)
+        if state.get("phase") == "ready":
+            print(f"ShopWise 已运行  {state['services']['web']['health']}")
+        elif state.get("phase") == "starting":
+            print("ShopWise 正在启动，可运行 status 查看进度")
         else:
-            if not args.archive:
-                raise ValueError("请提供 .swdb 归档路径")
-            if args.action == "import" and not args.confirm_import:
-                raise ValueError("恢复将替换目标开发库内的备份对象，请提供 --confirm-import")
-            transfer(args.action, args.archive, env, lambda: database(env), lambda *a: compose(env, *a))
+            raise
     return 0
 
+
+def run_owned(args, env, local):
+    (local / "state.json").unlink(missing_ok=True)
+    if args.action == "init":
+        init(env)
+    elif args.action in ("start", "demo"):
+        serve(env, local, rebuild=args.action == "demo")
+    elif args.action == "seed":
+        database(env)
+        run([MAVEN, "-q", "package", "-DskipTests"], env, ROOT / "commerce-api")
+        run([binary("java", env), "-jar", JAR, "--shopwise.seed-only=true", "--server.port=0"], env)
+    elif args.action == "reset":
+        if not args.confirm_reset or env["SHOPWISE_DB_MODE"] != "compose":
+            raise ValueError("仅 Compose 开发库支持 reset，请先停止服务并提供 --confirm-reset")
+        run(compose(env, "down", "--volumes"), env)
+        database(env)
+        print("数据库已重置。下次启动会重新导入本地商品。")
+    else:
+        if not args.archive:
+            raise ValueError("请提供 .swdb 归档路径")
+        if args.action == "import" and not args.confirm_import:
+            raise ValueError("恢复将替换目标开发库内的备份对象，请提供 --confirm-import")
+        transfer(args.action, args.archive, env, lambda: database(env), lambda *a: compose(env, *a))
+    return 0
 
 if __name__ == "__main__":
     try:

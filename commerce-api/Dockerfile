@@ -11,5 +11,5 @@ WORKDIR /app
 COPY --from=build /source/target/commerce-api-1.0.0.jar app.jar
 USER 65532:65532
 ENV BIND_ADDRESS=0.0.0.0 SPRING_PROFILES_ACTIVE=prod
-EXPOSE 18081
+EXPOSE 20174
 ENTRYPOINT ["java","-jar","app.jar"]

@@ -1,0 +1,273 @@
+{
+  "ShopWise": {
+    "root": "shopwise",
+    "services": {
+      "web": {
+        "port": 20173,
+        "files": [
+          ".env.example",
+          "scripts/dev.py",
+          "web/vite.config.ts"
+        ]
+      },
+      "api": {
+        "port": 20174,
+        "files": [
+          ".env.example",
+          "scripts/dev.py",
+          "web/vite.config.ts",
+          "agent-service/config.py",
+          "commerce-api/src/main/resources/application.properties"
+        ]
+      },
+      "agent": {
+        "port": 18082,
+        "files": [
+          ".env.example",
+          "scripts/dev.py",
+          "agent-service/config.py"
+        ]
+      },
+      "db": {
+        "port": 15439,
+        "files": [
+          ".env.example",
+          "scripts/dev.py",
+          "compose.yaml"
+        ]
+      },
+      "demo-web": {
+        "port": 25174,
+        "files": [
+          "scripts/dev.py"
+        ]
+      },
+      "demo-api": {
+        "port": 28083,
+        "files": [
+          "scripts/dev.py"
+        ]
+      },
+      "demo-agent": {
+        "port": 28084,
+        "files": [
+          "scripts/dev.py"
+        ]
+      },
+      "demo-db": {
+        "port": 26439,
+        "files": [
+          "scripts/dev.py"
+        ]
+      }
+    }
+  },
+  "ScholarShip": {
+    "root": "pycharm",
+    "services": {
+      "web": {
+        "port": 15173,
+        "files": [
+          ".env.example",
+          "dev.py",
+          "frontend/vite.config.ts"
+        ]
+      },
+      "api": {
+        "port": 18080,
+        "files": [
+          "dev.py",
+          "frontend/vite.config.ts"
+        ]
+      },
+      "gateway": {
+        "port": 18081,
+        "files": [
+          "deploy/compose.yaml",
+          "backend/src/scholarship/config.py"
+        ]
+      },
+      "postgres": {
+        "port": 15432,
+        "files": [
+          "deploy/compose.yaml"
+        ]
+      },
+      "redis": {
+        "port": 16379,
+        "files": [
+          "deploy/compose.yaml"
+        ]
+      },
+      "qdrant": {
+        "port": 16333,
+        "files": [
+          "deploy/compose.yaml"
+        ]
+      }
+    }
+  },
+  "TripPal": {
+    "root": "pycharm",
+    "services": {
+      "app": {
+        "port": 8808,
+        "files": [
+          "compose.server.yaml",
+          "frontend/vite.config.ts"
+        ]
+      },
+      "web": {
+        "port": 8809,
+        "files": [
+          "frontend/vite.config.ts"
+        ]
+      },
+      "mysql": {
+        "port": 13316,
+        "files": [
+          "compose.yaml"
+        ]
+      },
+      "redis": {
+        "port": 16389,
+        "files": [
+          "compose.yaml"
+        ]
+      },
+      "elasticsearch": {
+        "port": 19220,
+        "files": [
+          "compose.yaml"
+        ]
+      },
+      "smtp": {
+        "port": 11026,
+        "files": [
+          "compose.yaml"
+        ]
+      },
+      "mail-web": {
+        "port": 18026,
+        "files": [
+          "compose.yaml"
+        ]
+      }
+    }
+  },
+  "AuditBot": {
+    "root": "pycharm",
+    "services": {
+      "app": {
+        "port": 18870,
+        "files": [
+          "config.py",
+          "frontend/vite.config.ts"
+        ]
+      },
+      "web": {
+        "port": 18872,
+        "files": [
+          "frontend/vite.config.ts"
+        ]
+      }
+    }
+  },
+  "CanvasEditor": {
+    "root": "pycharm",
+    "services": {
+      "web": {
+        "port": 15017,
+        "files": [
+          "packages/react/rspack.config.js"
+        ]
+      }
+    }
+  },
+  "FaceOcclusion": {
+    "root": "pycharm",
+    "services": {
+      "app": {
+        "port": 18871,
+        "files": [
+          "live_detection.py"
+        ]
+      }
+    }
+  },
+  "medicalProject": {
+    "root": "pycharm",
+    "services": {
+      "annotation": {
+        "port": 8000,
+        "files": [
+          "facial_palsy/pipeline/facep_annotate_server.py"
+        ]
+      },
+      "nme": {
+        "port": 8001,
+        "files": [
+          "facial_palsy/pipeline/facep_nme_server.py"
+        ]
+      },
+      "rpc": {
+        "port": 8002,
+        "files": [
+          "API_RPC/local_api_server.py"
+        ]
+      },
+      "dispatch-test": {
+        "port": 29090,
+        "files": [
+          "tools/dispatch-API-tests/local_test_config.py"
+        ]
+      }
+    }
+  },
+  "enterprise_knowledge_rag_v2": {
+    "root": "pycharm",
+    "services": {
+      "app": {
+        "port": 8796,
+        "files": [
+          "app/config.py",
+          "run_project.py"
+        ]
+      },
+      "mysql": {
+        "port": 13306,
+        "files": [
+          "compose.yaml"
+        ]
+      },
+      "elasticsearch": {
+        "port": 9200,
+        "files": [
+          "compose.yaml",
+          "app/config.py"
+        ]
+      },
+      "eval": {
+        "port": 8797,
+        "files": [
+          "scripts/isolated_server.py"
+        ]
+      },
+      "recovery": {
+        "port": 8798,
+        "files": [
+          "scripts/verify_recovery.py"
+        ]
+      }
+    }
+  },
+  "Ollama": {
+    "root": null,
+    "services": {
+      "shared": {
+        "port": 11434,
+        "files": []
+      }
+    }
+  }
+}

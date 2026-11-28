@@ -2,6 +2,8 @@
 
 Windows x64 在 PowerShell 使用 `./shopwise.cmd`，macOS Intel 与 Apple Silicon 使用 `./shopwise`。两个入口都以脚本所在位置定位项目，支持含中文和空格的路径。PyCharm 也可以运行 `scripts/dev.py`，把同样的命令和选项放入参数栏。
 
+其他本地项目的端口见[固定端口登记](local-ports.md)。
+
 ## 启动
 
 安装 Python 3.9+、JDK 17+、Node.js 22+（带 npm）、uv，以及已启动的 Docker Desktop 和 Compose v2。uv 会为 Agent 项目选择 Python 3.12。首次构建需要网络以获取锁文件指定的依赖。
@@ -14,7 +16,7 @@ Windows x64 在 PowerShell 使用 `./shopwise.cmd`，macOS Intel 与 Apple Silic
 | 在另一个终端查看状态 | `./shopwise.cmd status` | `./shopwise status` |
 | 停止本次启动的应用进程 | `./shopwise.cmd stop` | `./shopwise stop` |
 
-打开 <http://127.0.0.1:15173>。Java API、Agent 和 PostgreSQL 默认端口依次为 18081、18082、15439。首次 `start` 缺少构建产物时会自动执行 `init`；拉取代码或切换分支后执行 `init` 更新构建产物。Ctrl+C 或 `stop` 会关闭应用进程，保留数据库容器与数据卷。再次启动可继续使用此前的数据。单个服务失败时，查看 `.local/run/<项目名>/commerce.log`、`agent.log` 与 `web.log`。
+打开 <http://127.0.0.1:20173>。Java API、Agent 和 PostgreSQL 默认端口依次为 20174、18082、15439。首次 `start` 缺少构建产物时会自动执行 `init`；拉取代码或切换分支后执行 `init` 更新构建产物。Ctrl+C 或 `stop` 会关闭应用进程，保留数据库容器与数据卷。再次启动可继续使用此前的数据。单个服务失败时，查看 `.local/run/<项目名>/commerce.log`、`agent.log` 与 `web.log`。
 
 ## 本机配置
 
@@ -22,7 +24,7 @@ Windows x64 在 PowerShell 使用 `./shopwise.cmd`，macOS Intel 与 Apple Silic
 
 例如 `./shopwise start --project shopwise2 --db-port 25439 --api-port 28081 --agent-port 28082 --web-port 25173`。同一实例的后续命令使用相同的 `--project`。给不同实例指定不同项目名与全部端口。端口被其他程序占用时，启动命令会报告冲突。控制命令用由操作系统释放的项目锁和本次运行的随机标识识别监督进程，端口和历史 PID 仅用于诊断。
 
-默认使用 Compose。已安装 PostgreSQL 17 的机器可使用 `--db-mode external` 并准备本机数据库 `shopwise`、同名角色（默认开发密码 `shopwise`）；`--db-port` 会同时设置 Java、Python 客户端的默认连接。自定义库名或连接时，同时提供匹配的 `DB_URL`（JDBC）、`DATABASE_URL`（PostgreSQL URI）、`DB_USER` 和 `DB_PASSWORD`。显式服务 URL 和数据库 URL 会覆盖从端口派生的默认 URL。建议把自定义连接统一放在 `.env.local` 并在切换环境时重新核对。迁移外部本地库另需 `pg_dump` 和 `pg_restore`，客户端主版本应与服务端一致。
+默认使用 Compose。已安装 PostgreSQL 17 的机器可使用 `--db-mode external` 并准备本机数据库 `shopwise`、同名角色（默认开发密码 `shopwise`）；`--db-port` 会同时设置 Java、Python 客户端的默认连接。自定义库名或连接时，同时提供匹配的 `DB_URL`（JDBC）、`DATABASE_URL`（PostgreSQL URI）、`DB_USER` 和 `DB_PASSWORD`。显式服务 URL 和数据库 URL 会覆盖派生地址。本机 URL 端口必须与本次启动的端口配置一致。建议把自定义连接统一放在 `.env.local` 并在切换环境时重新核对。迁移外部本地库另需 `pg_dump` 和 `pg_restore`，客户端主版本应与服务端一致。
 
 已有 PostgreSQL 17 工具且没有 Docker 时，可在 `.env.local` 设置 `SHOPWISE_DB_MODE=native` 和 `SHOPWISE_PG_BIN`。启动器会在 `.local/postgres/<项目名>` 初始化独立开发库，通过环回地址和密码连接默认的 `postgres` 库。首次启动前可设置 `DB_USER`、`DB_PASSWORD`；已初始化的开发库沿用原有角色和密码。常规 `stop` 保留数据库进程与本地数据。原生模式同样需要客户端工具才可执行导出或导入。
 
@@ -37,6 +39,21 @@ Windows 在 PowerShell 执行 `.\shopwise.cmd demo`，macOS 在终端执行 `./s
 输入“帮我找一盏能寄到杭州、到手不超过 300 元的阅读灯”，再输入“只看有货的”和“比较第 1 和第 2 款”。按页面编号选商品，用“前往商家前核价”刷新链接。目录按中国大陆筛选，杭州具体地址、运费及进口税费在商家页确认。
 
 应用启动后自动刷新 ECB 汇率，并把有效汇率写入 `.local/run/shopwise-demo/ecb-rates.xml`。网络异常时沿用五天内的缓存，包括重启后的缓存。超过有效期或缺少对应币种时，页面标记为预算待核对。[ECB 每日汇率 XML](https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml)
+
+## 单命令本地验收
+
+从项目根目录运行下列命令。两种入口共用验收脚本。
+
+| 系统 | 验收命令 |
+| --- | --- |
+| macOS Intel / Apple Silicon | `./shopwise accept` |
+| Windows PowerShell | `.\shopwise.cmd accept` |
+
+需要 Docker Desktop 和 Compose v2。脚本优先使用本机 Chrome，可用 `SHOPWISE_CHROME` 指定路径。找不到 Chrome 时会安装 Playwright Chromium。首次下载构建依赖或浏览器需要网络。运行时使用离线 Agent、本地商品与汇率样例，商家页面由 Playwright 拦截并返回本地验收页。
+
+验收会构建独立副本，使用单独的端口和数据库。第一轮启动通过本地 HTTP 下载 ECB 格式的 XML，并验证磁盘缓存。第二轮让同一接口返回 503，验证真实比价接口仍能用缓存把 USD 25.00 换算为 ¥160.00。浏览器随后检查杭州 ¥300 筛选、两款商品比价、核价后金额与链接变化，并点击商家链接。两轮均检查应用停止和端口释放，最后删除本次创建的容器与数据卷。
+
+终端会列出 `PASS`、`FAIL` 和 `SKIP`。失败返回非零退出码，并显示日志尾部。完整报告位于 `.local/accept/<本次实例>/`，包括 `summary.txt`、服务日志、ECB 请求状态和浏览器日志。浏览器失败时还会保留 Playwright trace。日常开发数据与配置仍用原有入口管理。
 
 ## 跨机转移开发数据
 

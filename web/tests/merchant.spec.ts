@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.use({launchOptions:process.env.SHOPWISE_CHROME?{executablePath:process.env.SHOPWISE_CHROME}:{}});
 test("buyer reviews the quote before full checkout navigation",async({page})=>{
-  const base=process.env.SHOPWISE_WEB_URL||"http://127.0.0.1:25173";
+  const base=process.env.SHOPWISE_WEB_URL||"http://127.0.0.1:20173";
   const requests: string[] = [];
   await page.route("https://example.com/checkout",route=>route.fulfill({body:"Merchant checkout"}));
   await page.route("**/api/**",async(route)=>{

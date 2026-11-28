@@ -13,6 +13,8 @@ import java.time.*;
 import java.util.*;
 import javax.xml.stream.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -35,8 +37,9 @@ class ReferenceRates {
 
     @org.springframework.beans.factory.annotation.Autowired
     ReferenceRates(@Value("${SHOPWISE_ECB_RATES_CACHE:}") String cacheFile,
-                   @Value("${SHOPWISE_ECB_RATES_FILE:}") String bootstrapFile) {
-        this(cacheFile.isBlank()?null:Path.of(cacheFile),bootstrapFile.isBlank()?null:Path.of(bootstrapFile),httpSource());
+                   @Value("${SHOPWISE_ECB_RATES_FILE:}") String bootstrapFile, Environment environment) {
+        this(cacheFile.isBlank()?null:Path.of(cacheFile),bootstrapFile.isBlank()?null:Path.of(bootstrapFile),
+             httpSource(endpoint(environment)));
     }
 
     ReferenceRates(Path cacheFile,Path bootstrapFile,EcbSource source) {
@@ -45,11 +48,21 @@ class ReferenceRates {
         this.source=source;
     }
 
-    private static EcbSource httpSource() {
+    private static URI endpoint(Environment environment) {
+        if (!environment.acceptsProfiles(Profiles.of("acceptance & load-fixture & !prod"))) return ENDPOINT;
+        URI uri=URI.create(environment.getRequiredProperty("SHOPWISE_ACCEPT_ECB_URL"));
+        if (!"http".equals(uri.getScheme()) || !"127.0.0.1".equals(uri.getHost()) || uri.getPort()<1
+            || uri.getUserInfo()!=null || uri.getFragment()!=null) {
+            throw new IllegalArgumentException("Acceptance ECB endpoint must be a local HTTP URL");
+        }
+        return uri;
+    }
+
+    private static EcbSource httpSource(URI endpoint) {
         var http=HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(5)).build();
         return ()->{
-            var request=HttpRequest.newBuilder(ENDPOINT).timeout(Duration.ofSeconds(8)).build();
+            var request=HttpRequest.newBuilder(endpoint).timeout(Duration.ofSeconds(8)).build();
             var response=http.send(request,HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode()!=200) throw new IOException("ECB HTTP "+response.statusCode());
             return response.body();
