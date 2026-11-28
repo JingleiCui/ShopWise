@@ -83,6 +83,17 @@ paths:
               required: [message]
               properties:
                 message: {type: string, minLength: 1, maxLength: 400}
+                references:
+                  type: array
+                  maxItems: 4
+                  uniqueItems: true
+                  description: Optional catalog variants to verify for this question.
+                  items:
+                    type: object
+                    required: [provider, variantId]
+                    properties:
+                      provider: {enum: [shopify, ebay]}
+                      variantId: {type: string, minLength: 1, maxLength: 220}
       responses:
         '200':
           description: Status and message events. The message carries text, filters, offers, requestId, status, degradation, routing, tokens, comparison, sources and shipping and tax evidence. An upstream failure emits an error event.
@@ -205,6 +216,7 @@ components:
         available: {type: [boolean, 'null']}
         destination: {const: CN}
         observedAt: {type: string, format: date-time}
+        imageUrl: {type: [string, "null"], format: uri, description: Optional HTTPS image supplied by the catalog source.}
         referenceCny:
           type: [object, 'null']
           properties:

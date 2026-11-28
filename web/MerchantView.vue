@@ -2,6 +2,9 @@
 import { onMounted, ref } from "vue";
 import { api, ApiError } from "./store";
 import MerchantReturns from "./MerchantReturns.vue";
+import StoreHeader from "./StoreHeader.vue";
+import StoreFooter from "./StoreFooter.vue";
+import { Link2, Package, RotateCcw, MessageSquare } from "lucide-vue-next";
 interface Product {id:string;product:string;variant:string;amount:string;currency:string}
 interface Quote {id:string;cost:{totalAmount:{amount:string;currencyCode:string}}}
 interface Order {id:string;name:string;financial_status:string;fulfillment_status:string;current_total_price:string;currency:string;
@@ -83,18 +86,36 @@ async function answer(ticket:Ticket,close:boolean) {
   await api("/v1/merchant/staff/support/"+ticket.id,"POST",{message:replies.value[ticket.id],close});
   await update();
 }
+function goToSection(id: string) {
+  const heading = document.getElementById(id);
+  heading?.scrollIntoView({ block: "start" });
+  heading?.focus({ preventScroll: true });
+}
 </script>
 <template>
-  <header><div class="wrap nav"><a class="brand" href="#/">ShopWise</a><a href="#/">返回跨境选购</a></div></header>
-  <main class="wrap merchant">
-    <h1>合作店订单</h1>
-    <p v-if="error" role="alert">{{error}}</p>
-    <form v-if="!signedIn" @submit.prevent="run(login)">
+  <div class="sw-shell merchant-shell">
+    <StoreHeader orders />
+    <main class="sw-width merchant">
+      <div class="order-intro">
+        <h1>合作店订单</h1>
+        <p>查询合作店订单、配送进度和售后记录。</p>
+      </div>
+      <p v-if="error" class="order-feedback" role="alert">{{error}}</p>
+      <section v-if="!signedIn" class="order-entry" aria-labelledby="merchant-login">
+        <h2 id="merchant-login">登录账户</h2>
+        <p>登录后即可查看已关联的合作店订单。</p>
+        <form @submit.prevent="run(login)">
       <label>账号<input v-model="username" autocomplete="username" required/></label>
       <label>密码<input v-model="password" type="password" autocomplete="current-password" required/></label>
-      <button class="dark" :disabled="busy">登录</button>
-    </form>
-    <template v-else-if="staff"><section><h2>店铺客服工单</h2>
+          <button class="sw-button primary" :disabled="busy">{{ busy ? "正在登录…" : "登录" }}</button>
+        </form>
+      </section>
+    <div v-else-if="staff" class="order-workspace">
+      <nav class="order-sections" aria-label="客服管理">
+        <button type="button" @click="goToSection('order-support')"><MessageSquare :size="17" /> 客服工单</button>
+        <button type="button" @click="goToSection('return-title')"><RotateCcw :size="17" /> 退货与退款</button>
+      </nav>
+      <div class="order-content"><section><h2 id="order-support" tabindex="-1">店铺客服工单</h2>
       <button @click="run(update)" :disabled="busy">刷新工单</button>
       <p v-if="!tickets.length">暂无工单。</p>
       <article v-for="t in tickets" :key="t.id"><h3>{{t.reason}}</h3><p>{{t.reply}}</p>
@@ -104,24 +125,26 @@ async function answer(ticket:Ticket,close:boolean) {
           <button :disabled="busy || !replies[t.id]?.trim()" @click="run(()=>answer(t,true))">确认回复并关闭</button>
         </template><p v-else>已关闭</p>
       </article>
-    </section><MerchantReturns :orders="[]" staff /></template>
-    <template v-else-if="!bound">
-      <button v-if="enabled" class="dark" :disabled="busy" @click="run(bind)">绑定合作店账号</button>
-      <p v-else>合作店暂未开放。</p>
-    </template>
-    <template v-else>
-      <section><h2>商品与购物车</h2><p v-if="shopError">{{shopError}}</p>
-        <form v-if="products.length" @submit.prevent="run(preview)">
-          <label v-for="p in products" :key="p.id">{{p.product}} · {{p.variant}} · {{price(p.amount,p.currency)}}
-            <input type="number" min="0" max="20" v-model.number="quantities[p.id]" placeholder="0" @input="quote=undefined"/>
-          </label><button class="dark" :disabled="busy">核对价格</button>
-        </form>
-        <div v-if="quote">
-          <p>商家当前金额 {{price(quote.cost.totalAmount.amount,quote.cost.totalAmount.currencyCode)}}。具体配送、税费和最终总额由结账页确认。</p>
-          <button class="dark" :disabled="busy" @click="run(checkout)">确认并到商家结账</button>
-        </div>
-      </section>
-      <section><h2>订单与物流</h2>
+      </section><MerchantReturns :orders="[]" staff />
+      </div>
+    </div>
+    <section v-else-if="!bound" class="order-entry" aria-labelledby="merchant-binding">
+      <h2 id="merchant-binding">{{ enabled ? "关联合作店账号" : "合作店暂未开放" }}</h2>
+      <p v-if="enabled">关联你在商家的账户，查看对应订单与物流。</p>
+      <button v-if="enabled" class="sw-button primary" :disabled="busy" @click="run(bind)">
+        <Link2 :size="17" /> 绑定合作店账号
+      </button>
+      <a v-else class="sw-button plain" href="#/">继续跨店选购</a>
+    </section>
+    <div v-else class="order-workspace">
+      <nav class="order-sections" aria-label="订单服务">
+        <button type="button" @click="goToSection('merchant-orders')"><Package :size="17" /> 订单与物流</button>
+        <button type="button" @click="goToSection('merchant-cart')"><Package :size="17" /> 商品与购物车</button>
+        <button type="button" @click="goToSection('return-title')"><RotateCcw :size="17" /> 退货与退款</button>
+        <button v-if="tickets.length" type="button" @click="goToSection('merchant-support')"><MessageSquare :size="17" /> 客服进度</button>
+      </nav>
+      <div class="order-content">
+      <section><h2 id="merchant-orders" tabindex="-1">订单与物流</h2>
         <p v-if="!orders.length">没有已同步的订单。付款完成后可返回此页刷新。</p>
         <button @click="run(update)" :disabled="busy">刷新订单</button>
         <article v-for="o in orders" :key="o.id"><h3>{{o.name}}</h3>
@@ -133,16 +156,29 @@ async function answer(ticket:Ticket,close:boolean) {
           </form>
         </article>
       </section>
+      <section><h2 id="merchant-cart" tabindex="-1">商品与购物车</h2><p v-if="shopError">{{shopError}}</p>
+        <form v-if="products.length" @submit.prevent="run(preview)">
+          <label v-for="p in products" :key="p.id">{{p.product}} · {{p.variant}} · {{price(p.amount,p.currency)}}
+            <input type="number" min="0" max="20" v-model.number="quantities[p.id]" placeholder="0" @input="quote=undefined"/>
+          </label><button class="dark" :disabled="busy">核对价格</button>
+        </form>
+        <p v-else-if="!shopError">暂无可选商品。</p>
+        <div v-if="quote" class="order-quote">
+          <p>商家当前金额 {{price(quote.cost.totalAmount.amount,quote.cost.totalAmount.currencyCode)}}。具体配送、税费和最终总额由结账页确认。</p>
+          <button class="dark" :disabled="busy" @click="run(checkout)">确认并到商家结账</button>
+        </div>
+      </section>
       <MerchantReturns :orders="orders" :staff="false" />
-      <section v-if="tickets.length"><h2>客服进度</h2>
+      <section v-if="tickets.length"><h2 id="merchant-support" tabindex="-1">客服进度</h2>
         <article v-for="t in tickets" :key="t.id">
           <h3>{{t.reason}}</h3><p>{{t.status==='OPEN'?'待商家处理':t.status==='CLOSED'?'已关闭':'商家已回复'}}</p>
           <p v-if="t.reply">{{t.reply}}</p>
         </article>
       </section>
-    </template>
-  </main>
+      </div>
+    </div>
+    </main>
+    <StoreFooter />
+  </div>
 </template>
-<style scoped>
-.merchant{max-width:800px;padding:1.5rem 0 5rem}.merchant section{border-top:1px solid var(--line);margin:1.5rem 0}.merchant form{display:grid;gap:.75rem}.merchant label{display:grid;gap:.35rem}.merchant input{max-width:24rem;padding:.65rem;border:1px solid var(--line)}.merchant .dark{width:max-content;padding:.65rem 1rem}.merchant article{border-top:1px solid var(--line)}
-</style>
+<style scoped src="./merchant.css"></style>

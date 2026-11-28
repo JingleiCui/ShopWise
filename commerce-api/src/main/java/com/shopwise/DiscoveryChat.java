@@ -16,7 +16,8 @@ import tools.jackson.databind.*;
 @RestController
 @RequestMapping("/api/v1/assistant")
 class DiscoveryChat {
-    record Turn(String message) {}
+    record OfferRef(String provider, String variantId) {}
+    record Turn(String message, List<OfferRef> references) {}
     private final URI endpoint;
     private final String key;
     private final ObjectMapper json;
@@ -34,6 +35,13 @@ class DiscoveryChat {
     void turn(HttpSession session,@RequestBody Turn input,HttpServletResponse response) throws IOException {
         if (input.message()==null || input.message().isBlank() || input.message().length()>400)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"请输入 1 至 400 字的购物需求");
+        var references = input.references() == null ? List.<OfferRef>of() : input.references();
+        if (references.size() > 4 || references.stream().anyMatch(ref -> ref == null
+                || !("shopify".equals(ref.provider()) || "ebay".equals(ref.provider()))
+                || ref.variantId() == null || ref.variantId().isBlank() || ref.variantId().length() > 220)
+                || new HashSet<>(references).size() != references.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"请选择最多 4 个不同的商品规格");
+        }
         // Stable across replicas without disclosing the browser session identifier to the Agent.
         UUID thread=UUID.nameUUIDFromBytes(("discover/"+session.getId()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
         if (!concurrent.tryAcquire()) throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,"导购繁忙，请稍后再试");
@@ -54,7 +62,7 @@ class DiscoveryChat {
                 out.print("event: status\ndata: {\"text\":\"正在按中国收货条件查找商品…\"}\n\n"); out.flush();
                 try {
                     var req=HttpRequest.newBuilder(endpoint).timeout(Duration.ofSeconds(9)).header("Content-Type","application/json")
-                        .header("X-Service-Key",key).header("X-Request-Id",requestId).POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(Map.of("threadId",thread,"message",input.message())))).build();
+                        .header("X-Service-Key",key).header("X-Request-Id",requestId).POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(Map.of("threadId",thread,"message",input.message(),"references",references)))).build();
                     var res=http.send(req,HttpResponse.BodyHandlers.ofString());
                     if (res.statusCode()!=200) throw new IOException("agent unavailable");
                     var result=json.readTree(res.body());

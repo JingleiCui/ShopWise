@@ -25,6 +25,7 @@ live_cards: ContextVar[list] = ContextVar("live_cards")
 live_matches: ContextVar[list] = ContextVar("live_matches")
 user_message: ContextVar[str] = ContextVar("user_message")
 turn_meta: ContextVar[dict] = ContextVar("turn_meta")
+product_refs: ContextVar[list] = ContextVar("product_refs")
 TERMS = {"阅读灯":"desk lamp","台灯":"desk lamp","背包":"backpack","手机壳":"phone case",
          "充电器":"charger","运动鞋":"sneakers","耳机":"headphones","收纳盒":"storage box",
          "保温杯":"insulated cup","键盘":"keyboard","鼠标":"mouse","夹克":"jacket","外套":"coat"}
@@ -40,6 +41,8 @@ def compare_indices(message):
     return list(dict.fromkeys(int(rank) if rank.isdigit() else digits[rank] for rank in ranks))
 
 def route(state):
+    if product_refs.get():
+        return {"action": "inspect", "indices": [], "note": ""}
     msg=external_text(user_message.get())
     filters={k:v for k,v in state.get("filters",{}).items() if k not in {"keyword","spec","use"} or not PRIVATE.search(str(v))}
     metrics=turn_meta.get()
@@ -49,6 +52,14 @@ def route(state):
     except Exception as error:
         metrics.update(mode="offline",degradation="model_timeout" if "timeout" in type(error).__name__.lower() else "model_unavailable")
         intent=explicit
+    new_product = re.search(r"^(?:换成|换个|换一种|换看|改看|改搜|想改看)\s*(.+)", msg)
+    term=next((en for zh,en in TERMS.items() if zh in msg),None) or (intent.keyword if intent.keyword in WORDS and intent.keyword in msg else None)
+    if term and term != filters.get("keyword") or new_product:
+        for key in ("keyword", "spec", "use", "category"):
+            filters.pop(key, None)
+    if new_product and not term:
+        return {"filters": filters, "action": "clarify", "refs": [], "indices": [],
+                "note": "已切换商品。请提供商品的英文名或型号，也可直接用页面搜索。"}
     for key in ("budget","spec","use","inStock","category"):
         val=getattr(explicit,key)
         if val is None:
@@ -64,7 +75,6 @@ def route(state):
         filters["city"]=city[1]
     if "到手" in msg:
         filters["landed"]=True
-    term=next((en for zh,en in TERMS.items() if zh in msg),None) or (intent.keyword if intent.keyword in WORDS and intent.keyword in msg else None)
     if term and not re.search(r"[@:/]|\d{5,}",term):
         filters["keyword"]=term
     if not filters.get("keyword") and re.fullmatch(r"[a-zA-Z][a-zA-Z -]{1,55}",msg):
@@ -85,6 +95,11 @@ def get(path,params):
     return r.json()
 
 def fetch(state):
+    if state["action"] == "inspect":
+        turn_meta.get()["answer"] = inspect_products(product_refs.get(), user_message.get())
+        return {}
+    if state["action"] == "clarify":
+        return {}
     filters=state["filters"]
     cards=live_cards.get()
     if state["action"]=="help":
@@ -98,28 +113,9 @@ def fetch(state):
         if len(refs)<2:
             return {"note":"请先搜索并选出至少两款商品。"}
         meta=turn_meta.get()
-        shopify_ids=[variant for provider,variant in refs if provider=="shopify"]
-        lookups=[("/"+provider+"/lookup",{"id":variant}) for provider,variant in refs
-                 if provider!="shopify" or len(shopify_ids)==1]
-        if len(shopify_ids)>1:
-            lookups.append(("/shopify/compare",{"id":shopify_ids}))
-
-        def lookup(work):
-            token=turn_meta.set(meta)
-            try:
-                path,params=work
-                return get(path,params)["offers"]
-            except (httpx.HTTPError,KeyError):
-                return []
-            finally:
-                turn_meta.reset(token)
-
-        by_ref={}
-        with ThreadPoolExecutor(max_workers=len(lookups)) as pool:
-            for offers in pool.map(lookup,lookups):
-                for offer in offers:
-                    if not filters.get("inStock") or offer.get("available") is True:
-                        by_ref[(offer["provider"],offer["variantId"])]=offer
+        by_ref = lookup_references(refs)
+        if filters.get("inStock"):
+            by_ref = {ref: offer for ref, offer in by_ref.items() if offer.get("available") is True}
         visible=[ref for ref in refs if tuple(ref) in by_ref]
         cards.extend(by_ref[tuple(ref)] for ref in visible)
         if len(cards)<len(refs):
@@ -166,6 +162,76 @@ def fetch(state):
         note+=" 以下来源暂不可用："+"、".join(failed)+"。"
     return {"refs":refs,"note":note}
 
+def lookup_references(refs):
+    meta = turn_meta.get()
+    shopify_ids = [variant for provider, variant in refs if provider == "shopify"]
+    requests = [
+        (f"/{provider}/lookup", {"id": variant})
+        for provider, variant in refs
+        if provider != "shopify" or len(shopify_ids) == 1
+    ]
+    if len(shopify_ids) > 1:
+        requests.append(("/shopify/compare", {"id": shopify_ids}))
+
+    def lookup(work):
+        token = turn_meta.set(meta)
+        try:
+            return get(*work).get("offers", [])
+        except httpx.HTTPError:
+            return []
+        finally:
+            turn_meta.reset(token)
+
+    with ThreadPoolExecutor(max_workers=len(requests)) as pool:
+        return {(offer["provider"], offer["variantId"]): offer
+                for offers in pool.map(lookup, requests) for offer in offers}
+
+
+def inspect_products(refs, question):
+    meta = turn_meta.get()
+    cards = live_cards.get()
+    found = lookup_references(refs)
+    cards.extend(found[ref] for ref in refs if ref in found)
+    if not cards:
+        meta["degradation"] = "catalog_unavailable"
+        return "暂时无法核对所选商品，请稍后重试。"
+
+    question = external_text(question)
+    show_price = bool(re.search("价格|便宜|预算|多少钱|报价", question))
+    show_stock = bool(re.search("库存|有货|缺货|现货", question))
+    show_dimming = bool(re.search("调光|亮度", question))
+    show_shipping = bool(re.search("运费|税费|到手|配送|发货|寄到|到货", question))
+    lines = []
+    if show_shipping:
+        lines.append("运费、进口税费及具体地址的配送条件由商家确认。")
+    if not any((show_price, show_stock, show_dimming, show_shipping)):
+        lines.append("以下是商家目前提供、可直接比较的信息。")
+    for offer in cards:
+        title = offer.get("title") or "所选商品"
+        attributes = offer.get("attributes") or {}
+        parts = []
+        if show_dimming:
+            facts = [f"{key} {value}" for key, value in attributes.items()
+                     if re.search(r"调光|亮度|dimm|brightness", key, re.I)]
+            variant = offer.get("variant") or ""
+            if not facts and re.search(r"调光|亮度|dimm|brightness", variant, re.I):
+                facts.append(variant)
+            parts.append(" / ".join(facts) if facts else "商家未提供可核实的调光规格")
+        if show_price or not any((show_stock, show_dimming, show_shipping)):
+            currency, amount = offer.get("currency"), offer.get("price")
+            parts.append(f"商品价 {currency} {amount}" if currency and amount is not None else "商品价待确认")
+        if show_stock:
+            parts.append({True: "商家显示有货", False: "商家显示缺货"}.get(offer.get("available"), "库存待核实"))
+        if not any((show_price, show_stock, show_dimming, show_shipping)):
+            parts.append(offer.get("variant") or "商家未提供规格")
+        if parts:
+            lines.append(f"{title}：{'；'.join(parts)}。")
+    if len(cards) < len(refs):
+        meta["degradation"] = "source_partial"
+        lines.append("部分所选商品暂时无法核对。")
+    return "\n".join(lines)
+
+
 def graph_for(saver):
     builder=StateGraph(DiscoveryState)
     builder.add_node("understand",route)
@@ -175,7 +241,7 @@ def graph_for(saver):
     builder.add_edge("read_catalog",END)
     return builder.compile(checkpointer=saver)
 
-def turn(graph,thread,message,request_id=None):
+def turn(graph,thread,message,request_id=None,references=None):
     meta={"requestId":request_id or uuid4().hex,"deadline":time.monotonic()+8.2,"tokens":0,"mode":"offline"}
     meta_token=turn_meta.set(meta)
     cards=[]
@@ -183,13 +249,15 @@ def turn(graph,thread,message,request_id=None):
     message_token=user_message.set(message)
     matches=[]
     match_token=live_matches.set(matches)
+    refs_token=product_refs.set(references or [])
     try:
         state=graph.invoke({"turn":uuid4().hex},{"configurable":{"thread_id":"discovery/"+thread}})
-        return {"text":state["note"],"filters":state["filters"],"offers":cards,"matches":matches,
+        return {"text":meta.get("answer", state["note"]),"filters":state.get("filters", {}),"offers":cards,"matches":matches,
                 "requestId":meta["requestId"],"status":"degraded" if meta.get("degradation") else "ok",
                 "degradation":meta.get("degradation"),"routing":meta["mode"],"tokens":meta["tokens"],
                 "comparison":state["action"]=="compare","sources":meta.get("sources",{}),"evidence":{"shipping":"unknown","tax":"unknown"}}
     finally:
+        product_refs.reset(refs_token)
         live_cards.reset(token)
         user_message.reset(message_token)
         live_matches.reset(match_token)

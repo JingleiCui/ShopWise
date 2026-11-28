@@ -1,0 +1,50 @@
+.merchant { padding-block: clamp(24px, 5vw, 66px) 68px; }
+.order-intro { margin-bottom: 30px; }
+.order-intro h1 { font-size: clamp(2.1rem, 5vw, 3.65rem); line-height: 1.13; font-weight: 760; }
+.order-intro p { margin-top: 11px; color: var(--sw-secondary); line-height: 1.6; }
+.merchant h2, .merchant :deep(h2) { font-size: clamp(1.38rem, 3vw, 1.9rem); line-height: 1.18; }
+.merchant h3, .merchant :deep(h3) { font-size: 1rem; }
+.order-entry, .order-content > section { background: var(--sw-white); border-radius: var(--sw-radius); }
+.order-entry { display: grid; justify-items: start; gap: 12px; width: min(100%, 530px); padding: clamp(22px, 4vw, 42px); }
+.order-entry p, .order-content p, .order-content :deep(p) { color: var(--sw-secondary); font-size: .9rem; line-height: 1.6; }
+.order-entry form { margin-top: 8px; width: 100%; }
+.order-entry form .sw-button { width: 100%; margin-top: 4px; }
+.order-feedback { padding: 13px 16px; margin-bottom: 16px !important; border: 1px solid #e1c6c6; border-radius: 8px; background: #fff6f6; }
+.order-workspace { display: grid; grid-template-columns: 215px minmax(0, 1fr); gap: clamp(17px, 3vw, 39px); align-items: start; }
+.order-sections {
+  position: sticky; top: 12px; display: grid; align-content: start; gap: 4px;
+  padding: 9px; border-radius: var(--sw-radius); background: #eaeaec;
+}
+.order-sections button {
+  display: flex; align-items: center; gap: 9px; padding: 11px; color: var(--sw-ink);
+  white-space: nowrap; text-align: left; min-height: 44px; border-radius: 7px; font-size: .88rem;
+}
+.order-sections button:hover { background: var(--sw-white); }
+.order-content { display: grid; min-width: 0; gap: 14px; }
+.order-content h2, .order-content :deep(h2) { scroll-margin-top: 24px; }
+.order-content > section { display: grid; justify-items: start; gap: 13px; padding: clamp(19px, 3vw, 32px); }
+.order-content :is(article, form, .order-quote), .order-content :deep(:is(article, form)) { width: 100%; min-width: 0; }
+.order-content article, .order-content :deep(article) {
+  padding-top: 15px; border-top: 1px solid var(--sw-line); display: grid; gap: 7px; overflow-wrap: anywhere;
+}
+.merchant form, .merchant :deep(form) { display: grid; justify-items: start; gap: 13px; }
+.merchant label, .merchant :deep(label) { display: grid; gap: 6px; width: min(100%, 38rem); font-size: .9rem; font-weight: 600; }
+.merchant :deep(:is(input, select, textarea)) {
+  min-height: 44px; width: 100%; padding: 9px 11px; border: 1px solid var(--sw-line);
+  border-radius: 7px; color: var(--sw-ink); background: #fafafa;
+}
+.merchant :deep(textarea) { min-height: 86px; resize: vertical; }
+.merchant .dark, .merchant :deep(.dark) { min-height: 44px; padding: 9px 14px; border-radius: 8px; font-size: .87rem; font-weight: 690; }
+.order-content :deep(button:not(.dark)) {
+  min-height: 41px; padding: 8px 12px; border: 1px solid var(--sw-line); border-radius: 8px;
+  color: var(--sw-accent); font-size: .85rem; font-weight: 690;
+}
+.order-content :deep(button:not(.dark):hover:not(:disabled)) { background: var(--sw-panel); }
+.order-quote { display: grid; justify-items: start; gap: 10px; padding: 15px; background: #eff2f6; border-radius: 8px; }
+@media (max-width: 700px) {
+  .order-intro { margin-bottom: 20px; }
+  .order-workspace { grid-template-columns: minmax(0, 1fr); gap: 13px; }
+  .order-sections { position: static; display: flex; flex-wrap: wrap; padding: 5px; }
+  .order-sections button { padding-inline: 7px; font-size: .81rem; gap: 5px; }
+  .order-sections svg { width: 15px; }
+}

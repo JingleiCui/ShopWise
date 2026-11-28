@@ -7,7 +7,7 @@ import re
 import time
 from contextlib import asynccontextmanager
 from threading import Lock
-from typing import TypedDict
+from typing import Literal, TypedDict
 
 import httpx
 import psycopg
@@ -129,9 +129,15 @@ async def expire_discovery(pool,saver):
             LOG.warning("checkpoint retention failed type=%s",type(failure).__name__)
         await asyncio.sleep(300)
 
+class OfferReference(BaseModel):
+    provider: Literal["shopify", "ebay"]
+    variantId: str = Field(min_length=1, max_length=220)
+
+
 class SearchTurn(BaseModel):
     threadId: str = Field(min_length=1,max_length=64)
     message: str = Field(min_length=1,max_length=400)
+    references: list[OfferReference] = Field(default_factory=list, max_length=4)
 
 @app.post("/discovery/turn")
 def discovery_turn(turn: SearchTurn, request: Request, x_service_key: str = Header(default=""),
@@ -143,7 +149,10 @@ def discovery_turn(turn: SearchTurn, request: Request, x_service_key: str = Head
     if not try_discovery_thread(thread):
         raise HTTPException(409,"导购会话正在处理")
     try:
-        response=discovery.turn(request.app.state.discovery,turn.threadId,turn.message,request_id)
+        references = [(ref.provider, ref.variantId) for ref in turn.references]
+        if len(set(references)) != len(references) or any(not variant.strip() for _, variant in references):
+            raise HTTPException(400, "请选择不同的商品规格")
+        response=discovery.turn(request.app.state.discovery,turn.threadId,turn.message,request_id,references)
     finally:
         release_discovery_thread(thread)
     LOG.info("discovery requestId=%s model=%s routing=%s outcome=%s degradation=%s tokens=%s",

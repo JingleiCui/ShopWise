@@ -36,6 +36,6 @@ class AcceptanceCatalog implements CatalogProvider {
 
     private Offer lamp(String id, String title, String currency, long amount, String quote) {
         return new Offer(name(), id, id, title, "标准款", "验收商家", MERCHANT_URL + "?quote=" + quote,
-            currency, amount, "CN", true, Instant.now(), "new", null, null, null, null, Map.of());
+            currency, amount, "CN", true, Instant.now(), "new", null, null, null, null, id.equals("adjustable") ? Map.of("调光", "三级调光") : Map.of());
     }
 }

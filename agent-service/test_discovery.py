@@ -69,3 +69,55 @@ def test_batched_comparison_preserves_displayed_order_across_turns(monkeypatch):
     assert result["filters"]["budget"] == 300
     discovery.turn(graph, "guest", "比较第1和第2款")
     assert calls == [("/shopify/compare", ["4", "2"]), ("/shopify/compare", ["4", "2"])]
+
+
+def test_switch_to_unknown_product_does_not_reuse_old_search(monkeypatch):
+    monkeypatch.setattr(config, "MODE", "offline")
+    calls = []
+
+    def provider(path, params):
+        calls.append(params)
+        return {"sources": [{"provider": "shopify", "status": "empty", "offers": []}]}
+
+    monkeypatch.setattr(discovery, "get", provider)
+    graph = discovery.graph_for(InMemorySaver())
+    discovery.turn(graph, "guest", "预算300元，给我找一盏阅读灯")
+    clarification = discovery.turn(graph, "guest", "改看咖啡磨豆机")
+    assert "商品的英文名或型号" in clarification["text"]
+    assert calls == [{"q": "desk lamp reading", "budget": 300}]
+    assert "keyword" not in clarification["filters"]
+    assert "use" not in clarification["filters"]
+    discovery.turn(graph, "guest", "coffee grinder")
+    assert calls[-1] == {"q": "coffee grinder", "budget": 300}
+
+
+def test_selected_offer_evidence_is_scoped_and_keeps_discovery_state(monkeypatch):
+    monkeypatch.setattr(config, "MODE", "offline")
+    lamps = [
+        {"provider": "shopify", "variantId": "one", "title": "有调光规格", "attributes": {"调光": "三级"}},
+        {"provider": "shopify", "variantId": "two", "title": "无调光资料"},
+    ]
+
+    def provider(path, params):
+        if not path:
+            return {"sources": [{"provider": "shopify", "status": "ok", "offers": lamps}]}
+        assert path == "/shopify/compare" and params == {"id": ["two", "one"]}
+        return {"offers": lamps + [{"provider": "shopify", "variantId": "other"}]}
+
+    monkeypatch.setattr(discovery, "get", provider)
+    graph = discovery.graph_for(InMemorySaver())
+    first = discovery.turn(graph, "new-guest", "哪款支持调光？",
+                           references=[("shopify", "two"), ("shopify", "one")])
+    assert first["filters"] == {}
+    assert len(first["offers"]) == 2
+    ctx = {"configurable": {"thread_id": "discovery/new-guest"}}
+    assert "有调光规格" not in repr(graph.get_state(ctx).values)
+    discovery.turn(graph, "guest", "寄到杭州的阅读灯，预算300元")
+    result = discovery.turn(graph, "guest", "哪款支持调光？",
+                            references=[("shopify", "two"), ("shopify", "one")])
+    assert [offer["variantId"] for offer in result["offers"]] == ["two", "one"]
+    assert "调光 三级" in result["text"]
+    assert "商家未提供可核实的调光规格" in result["text"]
+    followup = discovery.turn(graph, "guest", "把预算改成 500")
+    assert followup["filters"]["city"] == "杭州"
+    assert followup["filters"]["budget"] == 500

@@ -1057,3 +1057,5 @@ onBeforeUnmount(() => {
     <Check :size="16" />{{ notice }}
   </div>
 </template>
+
+<style scoped src="./style.css"></style>

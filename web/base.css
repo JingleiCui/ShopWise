@@ -1,0 +1,53 @@
+:root {
+  font-family: "DM Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #262a23;
+  background: #faf9f5;
+  font-synthesis: none;
+  --line: #deded4;
+  --pine: #334c3e;
+  --muted: #666b60;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+body.locked {
+  overflow: hidden;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button,
+a {
+  color: inherit;
+}
+button {
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #789b7b;
+  outline-offset: 3px;
+}
+button svg,
+a svg {
+  flex: none;
+}
+a {
+  text-decoration: none;
+}

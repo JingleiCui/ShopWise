@@ -9,10 +9,17 @@ import java.util.Map;
 public record Offer(String provider, String productId, String variantId, String title, String variant,
                     String source, String url, String currency, Long amountMinor, String destination,
                     Boolean available, Instant observedAt, String condition, String gtin,
-                    ReferenceRates.Reference referenceCny, String brand, String mpn, Map<String,String> attributes) {
+                    ReferenceRates.Reference referenceCny, String brand, String mpn, Map<String,String> attributes, String imageUrl) {
+    public Offer(String provider, String productId, String variantId, String title, String variant,
+                 String source, String url, String currency, Long amountMinor, String destination,
+                 Boolean available, Instant observedAt, String condition, String gtin,
+                 ReferenceRates.Reference referenceCny, String brand, String mpn, Map<String,String> attributes) {
+        this(provider, productId, variantId, title, variant, source, url, currency, amountMinor, destination,
+            available, observedAt, condition, gtin, referenceCny, brand, mpn, attributes, null);
+    }
     Offer withReference(ReferenceRates.Reference reference) {
         return new Offer(provider,productId,variantId,title,variant,source,url,currency,amountMinor,destination,available,
-            observedAt,condition,gtin,reference,brand,mpn,attributes);
+            observedAt,condition,gtin,reference,brand,mpn,attributes,imageUrl);
     }
     @com.fasterxml.jackson.annotation.JsonProperty("price")
     public BigDecimal price() {
@@ -21,6 +28,11 @@ public record Offer(String provider, String productId, String variantId, String 
             int scale = Currency.getInstance(currency).getDefaultFractionDigits();
             return scale < 0 ? null : BigDecimal.valueOf(amountMinor, scale);
         } catch (IllegalArgumentException ignored) { return null; }
+    }
+
+    static String imageUrl(String raw) {
+        String url = merchantUrl(raw);
+        return url.isEmpty() ? null : url;
     }
 
     static String merchantUrl(String raw) {

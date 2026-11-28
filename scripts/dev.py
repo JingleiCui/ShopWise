@@ -1,6 +1,7 @@
 """ShopWise's shared Windows/macOS local development entry point."""
 import argparse
 from contextlib import contextmanager
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -203,6 +204,96 @@ def native_database(env):
             env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=35)
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as failure:
         raise ValueError(f"原生 PostgreSQL 启动失败，请查看 {log}") from failure
+
+
+def postgres_start_time(pid, env):
+    if WINDOWS:
+        command = [
+            "powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+            f"$p=Get-Process -Id {pid:d} -ErrorAction Stop; "
+            "if ($p.ProcessName -ne 'postgres') { exit 1 }; "
+            "$p.StartTime.ToUniversalTime().ToString('o')",
+        ]
+    else:
+        command = ["ps", "-p", str(pid), "-o", "comm=", "-o", "lstart="]
+    result = subprocess.run(command, env={**env, "LC_ALL": "C"},
+                            capture_output=True, text=True, timeout=8)
+    if result.returncode:
+        return None
+    try:
+        if WINDOWS:
+            return datetime.fromisoformat(result.stdout.strip()).timestamp()
+        executable, day, month, date, clock, year = result.stdout.strip().rsplit(maxsplit=5)
+        if Path(executable).name == "postgres":
+            return time.mktime(time.strptime(" ".join((day, month, date, clock, year)), "%a %b %d %H:%M:%S %Y"))
+    except ValueError:
+        return None
+    return None
+
+
+def stop_native_database(env, port):
+    directory = ROOT / ".local/postgres" / env["COMPOSE_PROJECT_NAME"]
+    if directory.resolve() != directory or directory.is_symlink():
+        raise ValueError("无法确认原生 PostgreSQL 数据目录归属")
+    if not (directory / "PG_VERSION").is_file():
+        return
+    control = [pg_tool("pg_ctl", env), "-D", str(directory)]
+    status = subprocess.run([*control, "status"], env=env, capture_output=True, timeout=10)
+    if status.returncode == 3:
+        return
+    if status.returncode != 0:
+        raise ValueError("无法确认原生 PostgreSQL 的运行状态")
+    pid_lines = (directory / "postmaster.pid").read_text(encoding="utf-8").splitlines()
+    active = listener(port)
+    if (len(pid_lines) < 4 or not pid_lines[0].isdecimal() or Path(pid_lines[1]).resolve() != directory
+            or pid_lines[3] != str(port) or not active or active.get("pids") != [int(pid_lines[0])]):
+        raise ValueError(f"无法确认端口 {port} 属于本项目的原生 PostgreSQL")
+    started = postgres_start_time(int(pid_lines[0]), env)
+    if not pid_lines[2].isdecimal() or started is None or abs(started - int(pid_lines[2])) > 5:
+        raise ValueError(f"无法通过端口 {port} 核验 PostgreSQL 的进程启动时间")
+    run([*control, "-m", "fast", "-w", "-t", "30", "stop"], env, timeout=35)
+
+
+def stop_compose_database(env, port):
+    docker = binary("docker", env)
+    endpoint = env.get("DOCKER_HOST")
+    if env.get("DOCKER_CONTEXT") or not endpoint:
+        context = run([docker, "context", "inspect"], env, capture_output=True, text=True, timeout=10)
+        endpoint = json.loads(context.stdout)[0]["Endpoints"]["docker"]["Host"]
+    if not endpoint.startswith(("unix://", "npipe://")):
+        raise ValueError("只支持停止本机 Docker 上的 ShopWise PostgreSQL")
+    result = run(compose(env, "ps", "--status", "running", "-q", "db"), env,
+                 capture_output=True, text=True, timeout=10)
+    containers = result.stdout.split()
+    if not containers:
+        return
+    if len(containers) != 1:
+        raise ValueError("无法确认唯一的 ShopWise PostgreSQL 容器")
+    inspected = run([docker, "inspect", containers[0]], env, capture_output=True, text=True, timeout=10)
+    database = json.loads(inspected.stdout)[0]
+    labels = database["Config"]["Labels"] or {}
+    published = database["NetworkSettings"]["Ports"].get("5432/tcp") or []
+    working_dir = labels.get("com.docker.compose.project.working_dir", "")
+    if (labels.get("com.docker.compose.project") != env["COMPOSE_PROJECT_NAME"]
+            or labels.get("com.docker.compose.service") != "db"
+            or not working_dir or Path(working_dir).resolve() != ROOT
+            or {"HostIp": HOST, "HostPort": str(port)} not in published):
+        raise ValueError(f"无法确认端口 {port} 属于本项目的 Compose PostgreSQL")
+    run([docker, "stop", "--time", "30", database["Id"]], env, timeout=40)
+
+
+def stop_database(env):
+    port = int(env["SHOPWISE_DB_PORT"])
+    if env["SHOPWISE_DB_MODE"] == "native":
+        stop_native_database(env, port)
+    else:
+        stop_compose_database(env, port)
+    deadline = time.monotonic() + 5
+    while listener(port):
+        if time.monotonic() >= deadline:
+            raise ValueError(f"数据库端口 {port} 仍有监听，请检查端口归属")
+        time.sleep(.2)
+    print(f"ShopWise PostgreSQL 已停止，端口 {port} 已释放。")
 
 
 def npm_command(env):
@@ -490,6 +581,7 @@ def parser():
         cli.add_argument("--" + name + "-port", type=int)
     cli.add_argument("--project", help="隔离本地实例和 Compose 项目")
     cli.add_argument("--db-mode", choices=("compose", "external", "native"))
+    cli.add_argument("--with-db", action="store_true", help="同时停止本项目管理的 PostgreSQL")
     cli.add_argument("--confirm-reset", action="store_true")
     cli.add_argument("--confirm-import", action="store_true")
     return cli
@@ -499,7 +591,10 @@ def main():
     if sys.argv[1:] == ["ports", "check"]:
         from port_registry import check
         return check()
-    args = parser().parse_args()
+    cli = parser()
+    args = cli.parse_args()
+    if args.with_db and args.action != "stop":
+        cli.error("--with-db 仅适用于 stop")
     if args.action == "accept":
         from acceptance import accept
         return accept(args)
@@ -516,9 +611,16 @@ def main():
         print(json.dumps(state, ensure_ascii=False))
         return 0
     if args.action in ("stop", "demo-stop"):
+        if args.with_db and env["SHOPWISE_DB_MODE"] == "external":
+            raise ValueError("--with-db 只支持 ShopWise 管理的原生或 Compose PostgreSQL")
         if not active_state(local) and occupied_apps(env):
             raise ValueError("固定端口有监听，但没有可确认的 ShopWise 实例。请运行 status 查看占用。")
         stop(local)
+        if args.with_db:
+            with ownership(local / "owner.lock"):
+                if occupied_apps(env):
+                    raise ValueError("仍有应用监听，无法安全停止 PostgreSQL")
+                stop_database(env)
         return 0
     if args.action in ("start", "demo", "init", "seed"):
         validate_ports(args, env)

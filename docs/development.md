@@ -40,6 +40,12 @@ Windows 在 PowerShell 执行 `.\shopwise.cmd demo`，macOS 在终端执行 `./s
 
 应用启动后自动刷新 ECB 汇率，并把有效汇率写入 `.local/run/shopwise-demo/ecb-rates.xml`。网络异常时沿用五天内的缓存，包括重启后的缓存。超过有效期或缺少对应币种时，页面标记为预算待核对。[ECB 每日汇率 XML](https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml)
 
+## 从 Python 启动和停止
+
+在 PyCharm 中直接运行项目根目录的 `run_project.py` 启动，在另一个运行配置执行 `stop_project.py` 停止。Windows 终端使用 `py -3 run_project.py` 和 `py -3 stop_project.py`，macOS 将 `py -3` 换成 `python3`。需要使用自定义本地实例时，为两个脚本传入相同的 `--project`。日常开发入口和其他管理命令也可以直接通过 `python scripts/dev.py --help` 查看。
+
+日常停止会保留数据库。若要同时释放本机 PostgreSQL 端口，在 Windows 执行 `py -3 stop_project.py --with-db`，在 macOS 执行 `python3 stop_project.py --with-db`。脚本先停止应用，然后核验数据库归属，支持本项目的原生 PostgreSQL 和本机 Compose 数据库。外部数据库拒绝此选项。下次运行 `run_project.py` 会重新启动本项目管理的数据库，数据继续保存在原目录或卷中。
+
 ## 单命令本地验收
 
 从项目根目录运行下列命令。两种入口共用验收脚本。

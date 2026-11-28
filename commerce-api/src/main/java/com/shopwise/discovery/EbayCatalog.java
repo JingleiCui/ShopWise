@@ -94,6 +94,7 @@ class EbayCatalog implements CatalogProvider {
         String gtin=itemGroup?null:ProductMatch.gtin(details.path("gtin").asString(null));
         offers.add(new Offer(name(),id,id,item.required("title").asString(),"",item.path("seller").path("username").asString("eBay"),
             link,currency,amount,"CN",null,Instant.now(),item.path("conditionId").asString(item.path("condition").asString("")),gtin,null,
-            ProductMatch.identifier(brand),ProductMatch.identifier(mpn),Map.copyOf(specs)));
+            ProductMatch.identifier(brand),ProductMatch.identifier(mpn),Map.copyOf(specs),
+            Offer.imageUrl(item.path("image").path("imageUrl").asString(""))));
     }
 }

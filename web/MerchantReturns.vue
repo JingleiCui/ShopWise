@@ -39,7 +39,7 @@ onMounted(()=>run(refresh));
 
 <template>
 <section class="return-panel">
-  <h2>退货与退款</h2>
+  <h2 id="return-title" tabindex="-1">退货与退款</h2>
   <p v-if="error" role="alert">{{error}}</p>
   <form v-if="!staff && orders.some(o=>o.returnableLines?.length)" @submit.prevent="run(submit)">
     <label>订单<select v-model="orderId" required @change="lineId=''; quantity=1">
@@ -78,9 +78,3 @@ onMounted(()=>run(refresh));
   </article>
 </section>
 </template>
-
-<style scoped>
-.return-panel :is(select,input,textarea){max-width:28rem;padding:.55rem;border:1px solid var(--line);background:white}
-.return-panel :is(form,label){display:grid;gap:.35rem}.return-panel form{gap:.75rem;margin-bottom:1rem}
-.return-panel .dark{width:max-content}.return-panel article{padding:.5rem 0}
-</style>

@@ -79,6 +79,22 @@ class LauncherTests(unittest.TestCase):
                 run.assert_not_called()
                 self.assertFalse((root / ".local" / "postgres").exists())
 
+    def test_stop_native_rejects_a_reused_listener_pid(self):
+        with temporary_root() as root:
+            directory = root / ".local/postgres/shopwise"
+            directory.mkdir(parents=True)
+            (directory / "PG_VERSION").write_text("17", encoding="ascii")
+            (directory / "postmaster.pid").write_text(f"42\n{directory}\n100\n15439\n", encoding="utf-8")
+            env = {"COMPOSE_PROJECT_NAME": "shopwise", "DB_USER": "shopwise", "DB_PASSWORD": "test"}
+            with (patch.object(dev, "pg_tool", side_effect=lambda name, _: name),
+                  patch.object(dev, "listener", return_value={"pids": [42]}),
+                  patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 0)),
+                  patch.object(dev, "postgres_start_time", return_value=300),
+                  patch.object(dev, "run") as control):
+                with self.assertRaisesRegex(ValueError, "进程启动时间"):
+                    dev.stop_native_database(env, 15439)
+                control.assert_not_called()
+
     def test_archive_roundtrip_and_checksum(self):
         with temporary_root() as root:
             archive, dump = root / "数据.swdb", root / "out.dump"

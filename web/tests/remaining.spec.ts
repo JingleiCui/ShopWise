@@ -12,12 +12,11 @@ test("verified cross-platform offers appear together",async({page})=>{
     matches:[{evidence:"GTIN",offers:["shopify/shopify-black","ebay/ebay-black"]}],
   }}));
   await page.goto(base);
-  await page.getByRole("button",{name:"按关键词搜索"}).click();
   await page.getByLabel("商品关键词").fill("desk light");
-  await page.getByRole("button",{name:"查找商品"}).click();
+  await page.getByRole("button",{name:"搜索",exact:true}).click();
   await expect(page.getByRole("heading",{name:"跨平台同款"})).toBeVisible();
   await expect(page.getByText("商品条码一致")).toBeVisible();
-  await expect(page.getByText(/ebay · ebay merchant ·/)).toBeVisible();
+  await expect(page.getByRole("listitem").filter({hasText:/ebay merchant ·/})).toBeVisible();
 });
 
 test("buyer submits a return for the selected order line",async({page})=>{

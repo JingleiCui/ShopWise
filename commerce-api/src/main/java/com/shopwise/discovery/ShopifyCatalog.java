@@ -40,7 +40,7 @@ class ShopifyCatalog implements CatalogProvider {
         return lookupAll(List.of(id));
     }
     @Override public List<Offer> lookupAll(List<String> ids) throws Exception {
-        return call("lookup_catalog", Map.of("ids",ids,"context",CONTEXT,"filters",FILTERS));
+        return call("lookup_catalog", Map.of("ids",ids,"context",CONTEXT,"filters",Map.of("ships_to",Map.of("country","CN"))));
     }
     public List<Offer> details(String id) throws Exception {
         return call("get_product", Map.of("id",id,"context",CONTEXT));
@@ -76,6 +76,17 @@ class ShopifyCatalog implements CatalogProvider {
         return offers;
     }
 
+    private String image(JsonNode variant, JsonNode product) {
+        for (var node : List.of(variant, product)) {
+            for (var media : node.path("media")) {
+                if (!"image".equals(media.path("type").asString(""))) continue;
+                String url = Offer.imageUrl(media.path("url").asString(""));
+                if (url != null) return url;
+            }
+        }
+        return null;
+    }
+
     private void append(JsonNode product, Instant at, List<Offer> offers) {
         for (var variant : product.path("variants")) {
             var price=variant.path("price");
@@ -100,7 +111,7 @@ class ShopifyCatalog implements CatalogProvider {
                 "CN",available.isBoolean()?available.booleanValue():null,at,grade,
                 ProductMatch.gtin(variant.path("gtin").asString(metadata.path("gtin").asString(null))),null,
                 ProductMatch.identifier(metadata.path("brand").asString(null)),
-                ProductMatch.identifier(metadata.path("mpn").asString(null)),Map.copyOf(attributes)));
+                ProductMatch.identifier(metadata.path("mpn").asString(null)),Map.copyOf(attributes), image(variant, product)));
         }
     }
 }
